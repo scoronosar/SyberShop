@@ -38,15 +38,15 @@ export const OrderPage = () => {
     cargos.length > 0
       ? [
           { title: 'Заказ создан', status: 'done' as const },
-          { title: 'В пути/консолидация', status: 'done' },
+          { title: 'В пути/консолидация', status: 'done' as const },
           {
             title: 'Карго прибыло',
-            status: tracking?.status === 'arrived' ? 'done' : 'current',
+            status: tracking?.status === 'arrived' ? ('done' as const) : ('current' as const),
             description: cargos[0]?.status ?? '',
           },
           {
             title: 'Начислена доставка',
-            status: tracking?.delivery_fee ? 'done' : 'pending',
+            status: tracking?.delivery_fee ? ('done' as const) : ('pending' as const),
             description: tracking?.delivery_fee ? `Доставка: ${tracking.delivery_fee.toFixed(2)}` : undefined,
           },
         ]

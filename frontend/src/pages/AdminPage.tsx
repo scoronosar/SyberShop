@@ -3,7 +3,8 @@ import { api } from '../lib/api';
 import { useSettingsStore } from '../state/settings';
 import { createCargo, arriveCargo } from '../api/logistics';
 import { createAdmin } from '../api/auth';
-import { FormEvent, useState } from 'react';
+import { useState } from 'react';
+import type { FormEvent } from 'react';
 import toast from 'react-hot-toast';
 
 export const AdminPage = () => {
