@@ -32,22 +32,29 @@ export class TaobaoService {
     }
 
     try {
-      const timestamp = Date.now().toString();
+      // TaoWorld Global Supply Platform API
+      // Docs: https://open.taobao.global/doc/doc.htm?docId=90
+      const timestamp = new Date().toISOString().replace(/\.\d{3}Z$/, '+08:00').replace(/[-:]/g, '');
       const params: Record<string, any> = {
-        method: 'aliexpress.ds.product.get',
+        method: 'taobao.global.seller.goods.list', // Adjust based on your API permissions
         app_key: this.appKey,
         timestamp,
         format: 'json',
         v: '2.0',
         sign_method: 'md5',
-        simplify: 'true',
-        product_id: '1005003524527685', // Example product for testing
+        page_size: pageSize.toString(),
+        page_num: page.toString(),
       };
+
+      if (query) {
+        params.keyword = query;
+      }
 
       params.sign = this.generateSign(params);
 
+      this.logger.log(`Calling TaoWorld API: ${params.method}`);
       const response = await firstValueFrom(
-        this.http.get(this.apiUrl, { params, timeout: 5000 }),
+        this.http.get(this.apiUrl, { params, timeout: 10000 }),
       );
 
       if (response.data?.error_response) {
@@ -55,9 +62,23 @@ export class TaobaoService {
         return this.getMockProducts(query);
       }
 
-      // TaoWorld API returns different structure, for now use mocks
-      this.logger.log('TaoWorld API available but using mocks for now (test mode)');
-      return this.getMockProducts(query);
+      // Parse TaoWorld response structure
+      const items = response.data?.data?.item_list || [];
+      if (items.length === 0) {
+        this.logger.log('TaoWorld returned no items, using mocks');
+        return this.getMockProducts(query);
+      }
+
+      this.logger.log(`TaoWorld returned ${items.length} items`);
+      return items.map((item: any) => ({
+        id: item.goods_id || item.item_id || `tw-${Date.now()}-${Math.random()}`,
+        title: item.title || item.goods_name || 'TaoWorld Product',
+        price_cny: parseFloat(item.price || item.sale_price || '0'),
+        images: item.pic_url || item.image_url ? [item.pic_url || item.image_url] : ['https://picsum.photos/400/400'],
+        rating: 4.5,
+        sales: parseInt(item.sales || '0', 10),
+        mock: false,
+      }));
     } catch (error) {
       this.logger.warn(`Failed to fetch from TaoWorld API: ${error.message}, using mock data`);
       return this.getMockProducts(query);
