@@ -1,0 +1,12 @@
+ВАЖНО: Добавьте эти ключи в файл backend/.env
+
+TAOBAO_APP_KEY=503900
+TAOBAO_APP_SECRET=AGx46GnoC0f7UqwdBaY7ZsFqFRCIk0te
+TAOBAO_MODE=PROD
+
+Также добавьте другие необходимые переменные:
+PORT=4000
+DATABASE_URL=postgresql://postgres:postgres@localhost:5432/sybershop
+REDIS_URL=redis://localhost:6379
+JWT_SECRET=your-secret-key-here
+
