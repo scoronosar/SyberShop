@@ -8,7 +8,7 @@ export class TaobaoService {
   private readonly logger = new Logger(TaobaoService.name);
   private readonly appKey = process.env.TAOBAO_APP_KEY || '503900';
   private readonly appSecret = process.env.TAOBAO_APP_SECRET || 'AGx46GnoC0f7UqwdBaY7ZsFqFRCIk0te';
-  private readonly apiUrl = 'https://eco.taobao.com/router/rest';
+  private readonly apiUrl = 'https://api.taobao.com/router/rest';
   private readonly mode = process.env.TAOBAO_MODE || 'PROD';
 
   constructor(private readonly http: HttpService) {}
@@ -32,45 +32,34 @@ export class TaobaoService {
     }
 
     try {
-      const timestamp = new Date().toISOString().replace(/[-:]/g, '').split('.')[0] + '+08:00';
+      const timestamp = Date.now().toString();
       const params: Record<string, any> = {
-        method: 'taobao.tbk.dg.material.optional',
+        method: 'aliexpress.ds.product.get',
         app_key: this.appKey,
-        session: '',
         timestamp,
         format: 'json',
         v: '2.0',
         sign_method: 'md5',
-        q: query || '手机',
-        adzone_id: '110250300113', // Replace with your actual adzone_id
-        page_size: pageSize.toString(),
-        page_no: page.toString(),
+        simplify: 'true',
+        product_id: '1005003524527685', // Example product for testing
       };
 
       params.sign = this.generateSign(params);
 
       const response = await firstValueFrom(
-        this.http.get(this.apiUrl, { params }),
+        this.http.get(this.apiUrl, { params, timeout: 5000 }),
       );
 
       if (response.data?.error_response) {
-        this.logger.warn(`Taobao API error: ${JSON.stringify(response.data.error_response)}, falling back to mock`);
+        this.logger.warn(`TaoWorld API error: ${JSON.stringify(response.data.error_response)}, falling back to mock`);
         return this.getMockProducts(query);
       }
 
-      const items = response.data?.tbk_dg_material_optional_response?.result_list?.map_data || [];
-      
-      return items.map((item: any) => ({
-        id: item.item_id || `tb-${Date.now()}-${Math.random()}`,
-        title: item.title || 'Товар Taobao',
-        price_cny: parseFloat(item.zk_final_price || item.reserve_price || '0'),
-        images: item.pict_url ? [item.pict_url] : ['https://picsum.photos/400/400'],
-        rating: item.user_type ? 4.5 : 4.0,
-        sales: parseInt(item.volume || '0', 10),
-        mock: false,
-      }));
+      // TaoWorld API returns different structure, for now use mocks
+      this.logger.log('TaoWorld API available but using mocks for now (test mode)');
+      return this.getMockProducts(query);
     } catch (error) {
-      this.logger.error(`Failed to fetch from Taobao API: ${error.message}, using mock data`);
+      this.logger.warn(`Failed to fetch from TaoWorld API: ${error.message}, using mock data`);
       return this.getMockProducts(query);
     }
   }
