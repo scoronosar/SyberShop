@@ -2,7 +2,6 @@ import { useSearchParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { fetchProducts } from '../api/products';
 import { ProductCard } from '../components/ProductCard';
-import { useTranslation } from 'react-i18next';
 import { useCallback, useState, useEffect } from 'react';
 import { useSettingsStore } from '../state/settings';
 import { motion } from 'framer-motion';
