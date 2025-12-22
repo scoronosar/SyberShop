@@ -52,6 +52,10 @@ export class TaobaoService {
       const timestamp = Date.now().toString();
       const apiPath = '/traffic/item/search';
       
+      // If no query, use recommended keywords for diverse products
+      const recommendedKeyword = this.getRecommendedKeyword(page);
+      const searchKeyword = query || recommendedKeyword;
+      
       const params: Record<string, any> = {
         app_key: this.appKey,
         timestamp,
@@ -59,13 +63,12 @@ export class TaobaoService {
         page_no: page.toString(),
         page_size: pageSize.toString(),
         access_token: accessToken,
-        // Keyword is required - use default for popular items if not provided
-        keyword: query || '热销商品', // "hot selling products" in Chinese
+        keyword: searchKeyword,
       };
 
       params.sign = this.generateSign(apiPath, params);
 
-      this.logger.log(`Calling TaoWorld Traffic Search API: ${apiPath} keyword="${query}"`);
+      this.logger.log(`Calling TaoWorld Traffic Search API: ${apiPath} keyword="${searchKeyword}" (user query: "${query || 'none'}")`);
       const response = await firstValueFrom(
         this.http.get(`${this.apiUrl}${apiPath}`, { params, timeout: 10000 }),
       );
@@ -82,7 +85,7 @@ export class TaobaoService {
         return this.getMockProducts(query);
       }
 
-      this.logger.log(`TaoWorld Traffic API returned ${items.length} real Taobao items!`);
+      this.logger.log(`✓ TaoWorld API returned ${items.length} REAL products!`);
       
       return items.map((item: any) => ({
         id: item.item_id?.toString() || `tw-${Date.now()}-${Math.random()}`,
@@ -97,6 +100,29 @@ export class TaobaoService {
       this.logger.error(`Failed to fetch from TaoWorld Traffic API: ${error.message}`, error.stack);
       return this.getMockProducts(query);
     }
+  }
+
+  /**
+   * Get recommended keyword for main page based on popular categories
+   * Returns different keywords to show diverse products
+   */
+  private getRecommendedKeyword(page: number): string {
+    const recommendedKeywords = [
+      '数码产品',    // Digital products / Electronics
+      '时尚女装',    // Fashion women's clothing
+      '运动户外',    // Sports & Outdoors
+      '家居用品',    // Home goods
+      '美妆护肤',    // Beauty & Skincare
+      '手机配件',    // Phone accessories
+      '潮流男装',    // Trendy men's clothing
+      '包包饰品',    // Bags & Accessories
+      '创意礼品',    // Creative gifts
+      '热销爆款',    // Hot selling items
+    ];
+    
+    // Rotate keywords based on page number for diversity
+    const index = (page - 1) % recommendedKeywords.length;
+    return recommendedKeywords[index];
   }
 
   async getProductDetails(itemId: string) {
