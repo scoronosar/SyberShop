@@ -12,6 +12,8 @@ import { OrdersModule } from './modules/orders/orders.module';
 import { LogisticsModule } from './modules/logistics/logistics.module';
 import { AdminModule } from './modules/admin/admin.module';
 import { OAuthModule } from './modules/oauth/oauth.module';
+import { ImageSearchModule } from './modules/image-search/image-search.module';
+import { FavoritesModule } from './modules/favorites/favorites.module';
 import { HttpModule } from '@nestjs/axios';
 
 @Module({
@@ -28,6 +30,8 @@ import { HttpModule } from '@nestjs/axios';
     LogisticsModule,
     AdminModule,
     OAuthModule,
+    ImageSearchModule,
+    FavoritesModule,
   ],
   controllers: [AppController],
   providers: [AppService],
