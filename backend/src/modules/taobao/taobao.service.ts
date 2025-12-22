@@ -8,19 +8,22 @@ export class TaobaoService {
   private readonly logger = new Logger(TaobaoService.name);
   private readonly appKey = process.env.TAOBAO_APP_KEY || '503900';
   private readonly appSecret = process.env.TAOBAO_APP_SECRET || 'AGx46GnoC0f7UqwdBaY7ZsFqFRCIk0te';
-  private readonly apiUrl = 'https://api.taobao.com/router/rest';
+  private readonly apiUrl = 'https://api.taobao.global/rest';
   private readonly mode = process.env.TAOBAO_MODE || 'PROD';
 
   constructor(private readonly http: HttpService) {}
 
-  private generateSign(params: Record<string, any>): string {
+  private generateSign(apiPath: string, params: Record<string, any>): string {
+    // TaoWorld uses HMAC-SHA256 (not MD5!) and includes API path in signature
+    // Format: apiPath + key1 + value1 + key2 + value2... (sorted by key)
     const sorted = Object.keys(params)
       .sort()
       .map((key) => `${key}${params[key]}`)
       .join('');
+    const signString = apiPath + sorted;
     const sign = crypto
-      .createHmac('md5', this.appSecret)
-      .update(sorted)
+      .createHmac('sha256', this.appSecret)
+      .update(signString)
       .digest('hex')
       .toUpperCase();
     return sign;
@@ -32,62 +35,61 @@ export class TaobaoService {
     }
 
     try {
-      // TaoWorld Global Supply Platform API
-      // Try multiple methods for compatibility
-      const timestamp = new Date().toISOString().replace(/[-:.]/g, '').replace('Z', '') + '+0800';
+      // TaoWorld Global Supply Platform API - /product/spus/get
+      // Docs: https://open.taobao.global/doc/api.htm#/api?cid=4&path=/product/spus/get
+      // Note: This works WITHOUT access_token for already distributed products
+      const timestamp = Date.now().toString();
+      const apiPath = '/product/spus/get';
       
-      // Try method 1: taobao.items.list.get (standard Taobao method)
       const params: Record<string, any> = {
-        method: 'taobao.items.list.get',
         app_key: this.appKey,
         timestamp,
-        format: 'json',
-        v: '2.0',
-        sign_method: 'md5',
-        fields: 'num_iid,title,nick,pic_url,price,approve_status',
+        sign_method: 'sha256',
         page_size: pageSize.toString(),
         page_no: page.toString(),
       };
 
-      if (query) {
-        params.q = query;
-      }
+      // TaoWorld signature: API_PATH + sorted params
+      params.sign = this.generateSign(apiPath, params);
 
-      params.sign = this.generateSign(params);
-
-      this.logger.log(`Calling TaoWorld API: ${params.method}`);
+      this.logger.log(`Calling TaoWorld API: ${apiPath}`);
       const response = await firstValueFrom(
-        this.http.get(this.apiUrl, { params, timeout: 10000 }),
+        this.http.get(`${this.apiUrl}${apiPath}`, { params, timeout: 10000 }),
       );
 
-      if (response.data?.error_response) {
-        this.logger.warn(`TaoWorld API error: ${JSON.stringify(response.data.error_response)}, falling back to mock`);
+      if (response.data?.error_code && response.data?.error_code !== '0') {
+        this.logger.warn(`TaoWorld API error: ${JSON.stringify(response.data)}, falling back to mock`);
         return this.getMockProducts(query);
       }
 
-      // Parse response - try multiple structures
-      let items = response.data?.items_list_get_response?.items?.item || 
-                  response.data?.data?.item_list ||
-                  response.data?.item_search_response?.items?.n_item ||
-                  [];
+      const productList = response.data?.data?.product_list || [];
       
-      if (items.length === 0) {
-        this.logger.log('TaoWorld/Taobao API returned no items, using mocks');
+      if (!Array.isArray(productList) || productList.length === 0) {
+        this.logger.log('TaoWorld returned no distributed products, using mocks');
         return this.getMockProducts(query);
       }
 
-      this.logger.log(`TaoWorld/Taobao API returned ${items.length} items`);
-      return items.map((item: any) => ({
-        id: item.num_iid || item.item_id || item.goods_id || `tw-${Date.now()}-${Math.random()}`,
-        title: item.title || item.goods_name || 'Taobao Product',
-        price_cny: parseFloat(item.price || item.sale_price || item.zk_final_price || '0'),
-        images: [item.pic_url || item.pict_url || item.image_url || 'https://picsum.photos/400/400'],
-        rating: item.user_type ? 4.5 : 4.0,
-        sales: parseInt(item.volume || item.sales || '0', 10),
+      this.logger.log(`TaoWorld returned ${productList.length} distributed products`);
+      
+      // Filter by query if provided
+      let filteredList = productList;
+      if (query) {
+        filteredList = productList.filter((item: any) => 
+          (item.title || item.cn_title || '').toLowerCase().includes(query.toLowerCase())
+        );
+      }
+
+      return filteredList.slice(0, pageSize).map((item: any) => ({
+        id: item.item_id || `tw-${Date.now()}-${Math.random()}`,
+        title: item.title || item.cn_title || 'TaoWorld Product',
+        price_cny: parseFloat(item.price || '0') / 100, // TaoWorld prices in cents
+        images: item.images ? JSON.parse(item.images) : ['https://picsum.photos/400/400'],
+        rating: parseFloat(item.material_quality_score || '0') / 20 || 4.0, // Score 0-100 -> rating 0-5
+        sales: 0, // Not provided in spus/get
         mock: false,
       }));
     } catch (error) {
-      this.logger.warn(`Failed to fetch from TaoWorld API: ${error.message}, using mock data`);
+      this.logger.error(`Failed to fetch from TaoWorld API: ${error.message}`, error.stack);
       return this.getMockProducts(query);
     }
   }
@@ -98,49 +100,49 @@ export class TaobaoService {
     }
 
     try {
-      const timestamp = new Date().toISOString().replace(/[-:.]/g, '').replace('Z', '') + '+0800';
+      // TaoWorld API: /product/details/query
+      // Docs: https://open.taobao.global/doc/api.htm#/api?cid=4&path=/product/details/query
+      const timestamp = Date.now().toString();
+      const apiPath = '/product/details/query';
+      
       const params: Record<string, any> = {
-        method: 'taobao.item.get',
         app_key: this.appKey,
         timestamp,
-        format: 'json',
-        v: '2.0',
-        sign_method: 'md5',
-        fields: 'num_iid,title,nick,pic_url,price,detail_url,volume,approve_status',
-        num_iid: itemId,
+        sign_method: 'sha256',
+        item_id_list: JSON.stringify([itemId]),
       };
 
-      params.sign = this.generateSign(params);
+      params.sign = this.generateSign(apiPath, params);
 
-      this.logger.log(`Calling Taobao item.get for ${itemId}`);
+      this.logger.log(`Calling TaoWorld ${apiPath} for ${itemId}`);
       const response = await firstValueFrom(
-        this.http.get(this.apiUrl, { params, timeout: 10000 }),
+        this.http.get(`${this.apiUrl}${apiPath}`, { params, timeout: 10000 }),
       );
 
-      if (response.data?.error_response) {
-        this.logger.warn(`Taobao item details error: ${JSON.stringify(response.data.error_response)}`);
+      if (response.data?.error_code && response.data?.error_code !== '0') {
+        this.logger.warn(`TaoWorld item details error: ${JSON.stringify(response.data)}`);
         return this.getMockProductDetails(itemId);
       }
 
-      const item = response.data?.item_get_response?.item;
+      const item = response.data?.data?.goods_info_list?.[0];
       
       if (!item) {
         this.logger.log('No item data in response, using mock');
         return this.getMockProductDetails(itemId);
       }
 
-      this.logger.log(`Successfully fetched item ${itemId}`);
+      this.logger.log(`Successfully fetched TaoWorld item ${itemId}`);
       return {
-        id: item.num_iid || itemId,
-        title: item.title || 'Taobao Product',
-        price_cny: parseFloat(item.price || '0'),
-        images: item.pic_url ? [item.pic_url] : ['https://picsum.photos/400/400'],
+        id: item.item_id || itemId,
+        title: item.title || item.short_title || 'TaoWorld Product',
+        price_cny: parseFloat(item.price || '0') / 100, // Price in cents
+        images: item.images || ['https://picsum.photos/400/400'],
         rating: 4.5,
-        sales: parseInt(item.volume || '0', 10),
+        sales: item.inventory || 0,
         mock: false,
       };
     } catch (error) {
-      this.logger.error(`Failed to get product details: ${error.message}`);
+      this.logger.error(`Failed to get TaoWorld product details: ${error.message}`);
       return this.getMockProductDetails(itemId);
     }
   }
