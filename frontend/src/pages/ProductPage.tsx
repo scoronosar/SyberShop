@@ -567,6 +567,7 @@ export const ProductPage = () => {
         )}
       </Modal>
     </div>
+    </div>
   );
-};
 
+};
