@@ -51,11 +51,9 @@ export class OAuthController {
 
   /**
    * Get OAuth connection status
-   * Admin only
+   * Public endpoint - returns only connection status, no sensitive data
    */
   @Get('status')
-  @UseGuards(RolesGuard)
-  @Roles('admin')
   async getStatus() {
     const status = await this.oauthService.getOAuthStatus();
     return {
