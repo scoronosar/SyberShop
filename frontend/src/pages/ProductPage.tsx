@@ -12,6 +12,9 @@ export const ProductPage = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [qty, setQty] = useState(1);
+  const [selectedImage, setSelectedImage] = useState(0);
+  const [selectedSku, setSelectedSku] = useState<any>(null);
+  const [activeTab, setActiveTab] = useState<'description' | 'specs' | 'delivery'>('description');
   const queryClient = useQueryClient();
   const role = useAuthStore((s) => s.role);
   const currency = useSettingsStore((s) => s.currency);
@@ -29,6 +32,7 @@ export const ProductPage = () => {
   
   const [showBreakdown, setShowBreakdown] = useState(false);
   const [openPriceModal, setOpenPriceModal] = useState(false);
+  const [isZoomed, setIsZoomed] = useState(false);
 
   const { data, isLoading } = useQuery({
     queryKey: ['product', id, currency],
@@ -57,20 +61,80 @@ export const ProductPage = () => {
     );
   }
 
+  const handleShare = () => {
+    if (navigator.share) {
+      navigator.share({
+        title: data.title,
+        text: `Проверьте этот товар: ${data.title}`,
+        url: window.location.href,
+      }).catch(() => {});
+    } else {
+      navigator.clipboard.writeText(window.location.href);
+      toast.success('Ссылка скопирована!');
+    }
+  };
+
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-      <div className="space-y-4">
-        <div className="aspect-square rounded-2xl overflow-hidden shadow-xl bg-gradient-to-br from-gray-100 to-gray-50 ring-1 ring-gray-200">
-          <img src={data.images?.[0]} alt={data.title} className="w-full h-full object-cover" />
-        </div>
-        <div className="grid grid-cols-4 gap-3">
-          {data.images?.map((img, idx) => (
-            <div key={img} className="aspect-square rounded-xl overflow-hidden border-2 border-gray-200 hover:border-primary-400 transition-all cursor-pointer shadow-sm hover:shadow-md">
-              <img src={img} className="w-full h-full object-cover" alt={`${data.title} ${idx + 1}`} />
-            </div>
-          ))}
-        </div>
+    <div className="space-y-6">
+      {/* Breadcrumbs */}
+      <div className="flex items-center gap-2 text-sm text-gray-600">
+        <button onClick={() => navigate('/')} className="hover:text-primary-600">Главная</button>
+        <span>›</span>
+        {data.category && (
+          <>
+            <span>{data.category}</span>
+            <span>›</span>
+          </>
+        )}
+        <span className="text-gray-900 font-semibold truncate">{data.title.slice(0, 50)}...</span>
       </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        {/* Image Gallery */}
+        <div className="space-y-4">
+          {/* Main Image */}
+          <div 
+            className="relative aspect-square rounded-3xl overflow-hidden shadow-2xl bg-gradient-to-br from-gray-100 to-gray-50 ring-2 ring-gray-200 cursor-zoom-in"
+            onClick={() => setIsZoomed(true)}
+          >
+            <img 
+              src={data.images?.[selectedImage] || data.images?.[0]} 
+              alt={data.title} 
+              className="w-full h-full object-cover transition-transform duration-300 hover:scale-105" 
+            />
+            {!data.mock && (
+              <div className="absolute top-4 left-4 px-3 py-1.5 bg-green-500/90 backdrop-blur-sm text-white text-xs font-bold rounded-lg shadow-lg flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-white animate-pulse" />
+                <span>REAL TAOBAO</span>
+              </div>
+            )}
+            <button 
+              onClick={(e) => { e.stopPropagation(); setIsZoomed(true); }}
+              className="absolute bottom-4 right-4 px-4 py-2 bg-white/90 backdrop-blur-sm text-gray-700 text-xs font-bold rounded-lg shadow-lg hover:bg-white transition-all"
+            >
+              🔍 Увеличить
+            </button>
+          </div>
+
+          {/* Thumbnails */}
+          {data.images && data.images.length > 1 && (
+            <div className="grid grid-cols-5 gap-3">
+              {data.images.map((img, idx) => (
+                <button
+                  key={img}
+                  onClick={() => setSelectedImage(idx)}
+                  className={`aspect-square rounded-xl overflow-hidden transition-all cursor-pointer ${
+                    selectedImage === idx
+                      ? 'ring-3 ring-primary-500 shadow-lg scale-105'
+                      : 'ring-2 ring-gray-200 hover:ring-primary-300 hover:shadow-md'
+                  }`}
+                >
+                  <img src={img} className="w-full h-full object-cover" alt={`${data.title} ${idx + 1}`} />
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
       
       <div className="space-y-6">
         <div className="flex items-center gap-2 flex-wrap">
@@ -180,90 +244,280 @@ export const ProductPage = () => {
           </button>
         </div>
 
-        <div className="card p-6 space-y-4">
-          <label className="text-sm font-bold text-gray-800">Количество</label>
-          <div className="flex items-center gap-3">
-            <input
-              type="number"
-              min={1}
-              value={qty}
-              onChange={(e) => setQty(Number(e.target.value))}
-              className="w-28 input-field text-center font-semibold"
-            />
-            <button
-              onClick={() => addMutation.mutate()}
-              className="btn-primary flex-1"
-            >
-              🛒 Добавить в корзину
-            </button>
-          </div>
-          <div className="text-sm text-gray-600 bg-blue-50 border border-blue-200 rounded-lg p-3">
-            📦 Доставка будет начислена после прибытия груза (cargo arrival).
-          </div>
+        {/* Action buttons */}
+        <div className="flex gap-3">
+          <button
+            onClick={handleShare}
+            className="btn-secondary flex-1 flex items-center justify-center gap-2"
+          >
+            <span>🔗</span>
+            <span>Поделиться</span>
+          </button>
+          <button
+            onClick={() => toast.success('Добавлено в избранное (скоро)')}
+            className="btn-secondary flex-1 flex items-center justify-center gap-2"
+          >
+            <span>❤️</span>
+            <span>В избранное</span>
+          </button>
         </div>
 
-        {/* Video */}
-        {data.video_url && (
+        {/* SKU Selector */}
+        {data.sku_list && data.sku_list.length > 0 && (
           <div className="card p-6 space-y-4">
-            <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
-              <span>🎥</span>
-              <span>Видео товара</span>
-            </h3>
-            <video 
-              controls 
-              className="w-full rounded-xl shadow-lg"
-              poster={data.images[0]}
-            >
-              <source src={data.video_url} type="video/mp4" />
-              Ваш браузер не поддерживает видео.
-            </video>
-          </div>
-        )}
-
-        {/* Description */}
-        {data.description && (
-          <div className="card p-6 space-y-4">
-            <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
-              <span>📝</span>
-              <span>Описание товара</span>
-            </h3>
-            <div 
-              className="prose prose-sm max-w-none text-gray-700"
-              dangerouslySetInnerHTML={{ __html: data.description }}
-            />
-          </div>
-        )}
-
-        {/* Properties */}
-        {data.properties && data.properties.length > 0 && (
-          <div className="card p-6 space-y-4">
-            <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
-              <span>📋</span>
-              <span>Характеристики</span>
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {data.properties.map((prop: any, idx: number) => (
-                <div key={idx} className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
-                  <span className="font-semibold text-gray-700 min-w-[120px]">{prop.name || prop.prop_name}:</span>
-                  <span className="text-gray-600">{prop.value || prop.value_name}</span>
-                </div>
+            <h3 className="text-base font-bold text-gray-800">Выберите вариант:</h3>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+              {data.sku_list.map((sku: any, idx: number) => (
+                <button
+                  key={sku.sku_id || idx}
+                  onClick={() => setSelectedSku(sku)}
+                  className={`p-3 rounded-xl border-2 transition-all text-sm font-semibold ${
+                    selectedSku?.sku_id === sku.sku_id
+                      ? 'border-primary-500 bg-primary-50 text-primary-700 shadow-md'
+                      : 'border-gray-200 hover:border-primary-300 bg-white'
+                  }`}
+                >
+                  {sku.properties?.map((p: any) => p.value_name || p.value).join(' / ') || `Вариант ${idx + 1}`}
+                </button>
               ))}
             </div>
           </div>
         )}
 
-        {/* Reviews placeholder */}
         <div className="card p-6 space-y-4">
-          <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
-            <span>💬</span>
-            <span>Отзывы покупателей</span>
-          </h3>
-          <div className="text-center py-8 text-gray-500">
-            <div className="text-4xl mb-3">🗨️</div>
-            <p className="text-sm">Отзывы будут доступны в следующей версии</p>
+          <label className="text-sm font-bold text-gray-800">Количество</label>
+          <div className="flex items-center gap-3">
+            <div className="flex items-center border-2 border-gray-200 rounded-xl overflow-hidden">
+              <button
+                onClick={() => setQty(Math.max(1, qty - 1))}
+                className="px-4 py-3 bg-gray-50 hover:bg-gray-100 font-bold text-gray-700"
+              >
+                −
+              </button>
+              <input
+                type="number"
+                min={1}
+                value={qty}
+                onChange={(e) => setQty(Math.max(1, Number(e.target.value)))}
+                className="w-20 text-center font-bold text-lg border-0 focus:ring-0 py-3"
+              />
+              <button
+                onClick={() => setQty(qty + 1)}
+                className="px-4 py-3 bg-gray-50 hover:bg-gray-100 font-bold text-gray-700"
+              >
+                +
+              </button>
+            </div>
+            <button
+              onClick={() => addMutation.mutate()}
+              disabled={addMutation.isPending}
+              className="btn-primary flex-1 text-base font-bold py-3"
+            >
+              {addMutation.isPending ? '⏳ Добавляем...' : '🛒 Добавить в корзину'}
+            </button>
+          </div>
+          <div className="flex items-center gap-3 text-sm text-gray-600">
+            <div className="flex-1 bg-blue-50 border border-blue-200 rounded-lg p-3 flex items-center gap-2">
+              <span>📦</span>
+              <span>Доставка при прибытии груза</span>
+            </div>
           </div>
         </div>
+
       </div>
+
+      {/* Tabs Section */}
+      <div className="card overflow-hidden">
+        <div className="flex border-b border-gray-200">
+          <button
+            onClick={() => setActiveTab('description')}
+            className={`flex-1 px-6 py-4 font-bold text-sm transition-all ${
+              activeTab === 'description'
+                ? 'bg-primary-50 text-primary-700 border-b-2 border-primary-500'
+                : 'bg-white text-gray-600 hover:bg-gray-50'
+            }`}
+          >
+            📝 Описание
+          </button>
+          <button
+            onClick={() => setActiveTab('specs')}
+            className={`flex-1 px-6 py-4 font-bold text-sm transition-all ${
+              activeTab === 'specs'
+                ? 'bg-primary-50 text-primary-700 border-b-2 border-primary-500'
+                : 'bg-white text-gray-600 hover:bg-gray-50'
+            }`}
+          >
+            📋 Характеристики
+          </button>
+          <button
+            onClick={() => setActiveTab('delivery')}
+            className={`flex-1 px-6 py-4 font-bold text-sm transition-all ${
+              activeTab === 'delivery'
+                ? 'bg-primary-50 text-primary-700 border-b-2 border-primary-500'
+                : 'bg-white text-gray-600 hover:bg-gray-50'
+            }`}
+          >
+            🚚 Доставка
+          </button>
+        </div>
+
+        <div className="p-8">
+          {activeTab === 'description' && (
+            <div className="space-y-6">
+              {data.video_url && (
+                <div className="rounded-2xl overflow-hidden shadow-lg">
+                  <video 
+                    controls 
+                    className="w-full"
+                    poster={data.images?.[0]}
+                  >
+                    <source src={data.video_url} type="video/mp4" />
+                    Ваш браузер не поддерживает видео.
+                  </video>
+                </div>
+              )}
+              {data.description ? (
+                <div 
+                  className="prose prose-sm max-w-none text-gray-700"
+                  dangerouslySetInnerHTML={{ __html: data.description }}
+                />
+              ) : (
+                <div className="text-center py-12 text-gray-500">
+                  <div className="text-5xl mb-3">📄</div>
+                  <p className="text-sm">Описание будет добавлено</p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {activeTab === 'specs' && (
+            <div className="space-y-4">
+              {data.properties && data.properties.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {data.properties.map((prop: any, idx: number) => (
+                    <div key={idx} className="flex items-start gap-4 p-4 bg-gradient-to-br from-gray-50 to-white rounded-xl border border-gray-200">
+                      <span className="font-bold text-gray-800 min-w-[140px]">{prop.name || prop.prop_name}:</span>
+                      <span className="text-gray-700">{prop.value || prop.value_name}</span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-12 text-gray-500">
+                  <div className="text-5xl mb-3">📋</div>
+                  <p className="text-sm">Характеристики будут добавлены</p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {activeTab === 'delivery' && (
+            <div className="space-y-6">
+              <div className="grid md:grid-cols-2 gap-6">
+                <div className="p-6 bg-gradient-to-br from-blue-50 to-cyan-50 rounded-2xl border-2 border-blue-200">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-12 h-12 rounded-xl bg-blue-500 flex items-center justify-center">
+                      <span className="text-white text-2xl">📦</span>
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-gray-900">Доставка из Китая</h4>
+                      <p className="text-xs text-gray-600">Международная доставка</p>
+                    </div>
+                  </div>
+                  <ul className="space-y-2 text-sm text-gray-700">
+                    <li className="flex items-start gap-2">
+                      <span className="text-green-500 mt-0.5">✓</span>
+                      <span>Товар закупается напрямую с Taobao</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-green-500 mt-0.5">✓</span>
+                      <span>Отправка на склад консолидации в Китае</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-green-500 mt-0.5">✓</span>
+                      <span>Международная доставка до вашей страны</span>
+                    </li>
+                  </ul>
+                </div>
+
+                <div className="p-6 bg-gradient-to-br from-purple-50 to-pink-50 rounded-2xl border-2 border-purple-200">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-12 h-12 rounded-xl bg-purple-500 flex items-center justify-center">
+                      <span className="text-white text-2xl">💰</span>
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-gray-900">Оплата доставки</h4>
+                      <p className="text-xs text-gray-600">После прибытия груза</p>
+                    </div>
+                  </div>
+                  <ul className="space-y-2 text-sm text-gray-700">
+                    <li className="flex items-start gap-2">
+                      <span className="text-purple-500 mt-0.5">✓</span>
+                      <span>Доставка рассчитывается по весу/объёму</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-purple-500 mt-0.5">✓</span>
+                      <span>Оплата после прибытия на склад</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-purple-500 mt-0.5">✓</span>
+                      <span>Трекинг на всех этапах</span>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+
+              <div className="p-6 bg-gradient-to-r from-amber-50 to-orange-50 rounded-2xl border-2 border-amber-200">
+                <h4 className="font-bold text-gray-900 mb-3 flex items-center gap-2">
+                  <span>⏱️</span>
+                  <span>Примерные сроки</span>
+                </h4>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                  <div className="text-center p-3 bg-white rounded-lg">
+                    <div className="font-bold text-2xl text-primary-600 mb-1">2-5</div>
+                    <div className="text-gray-600">дней на закупку</div>
+                  </div>
+                  <div className="text-center p-3 bg-white rounded-lg">
+                    <div className="font-bold text-2xl text-primary-600 mb-1">3-7</div>
+                    <div className="text-gray-600">дней консолидация</div>
+                  </div>
+                  <div className="text-center p-3 bg-white rounded-lg">
+                    <div className="font-bold text-2xl text-primary-600 mb-1">15-30</div>
+                    <div className="text-gray-600">дней международная доставка</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Image Zoom Modal */}
+      <Modal open={isZoomed} onClose={() => setIsZoomed(false)} title="">
+        <div className="relative">
+          <img 
+            src={data.images?.[selectedImage] || data.images?.[0]} 
+            alt={data.title}
+            className="w-full h-auto rounded-xl"
+          />
+          {data.images && data.images.length > 1 && (
+            <div className="flex justify-center gap-2 mt-4">
+              {data.images.map((img, idx) => (
+                <button
+                  key={img}
+                  onClick={() => setSelectedImage(idx)}
+                  className={`w-16 h-16 rounded-lg overflow-hidden transition-all ${
+                    selectedImage === idx
+                      ? 'ring-3 ring-primary-500'
+                      : 'ring-1 ring-gray-300 opacity-60 hover:opacity-100'
+                  }`}
+                >
+                  <img src={img} className="w-full h-full object-cover" alt={`Thumb ${idx + 1}`} />
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      </Modal>
       <Modal open={openPriceModal} onClose={() => setOpenPriceModal(false)} title="💰 Детали цены">
         {role === 'admin' ? (
           <div className="space-y-4">

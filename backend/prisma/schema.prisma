@@ -147,16 +147,3 @@ model TaoworldToken {
   updatedAt         DateTime @updatedAt
 }
 
-model CurrencyRate {
-  id          String   @id @default(uuid())
-  currency    String   @unique // RUB, USD, UZS, TJS, KZT
-  code        String   // Currency code
-  name        String   // Currency name
-  symbol      String   // Currency symbol
-  rateFromCNY Decimal  @db.Decimal(14, 4) // Exchange rate from CNY (1 CNY = X currency)
-  markup      Decimal  @db.Decimal(5, 2) @default(1.05) // Markup coefficient (default 5%)
-  isActive    Boolean  @default(true)
-  updatedAt   DateTime @updatedAt
-  createdAt   DateTime @default(now())
-}
-
