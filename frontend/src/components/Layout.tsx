@@ -5,6 +5,8 @@ import { useAuthStore } from '../state/auth';
 import { useEffect } from 'react';
 import i18n from '../i18n';
 import { useSettingsStore } from '../state/settings';
+import { Modal } from './Modal';
+import { ImageSearch } from './ImageSearch';
 
 type Props = { children: ReactNode };
 
@@ -13,6 +15,7 @@ export const Layout = ({ children }: Props) => {
   const [searchParams] = useSearchParams();
   const initialQuery = searchParams.get('q') ?? '';
   const [query, setQuery] = useState(initialQuery);
+  const [showImageSearch, setShowImageSearch] = useState(false);
   const email = useAuthStore((s) => s.email);
   const role = useAuthStore((s) => s.role);
   const logout = useAuthStore((s) => s.logout);
@@ -50,12 +53,20 @@ export const Layout = ({ children }: Props) => {
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Поиск по Taobao товарам..."
-                className="w-full rounded-l-xl border-2 border-gray-200 pl-10 pr-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary-300 focus:border-primary-400 transition-all"
+                className="w-full border-2 border-gray-200 pl-10 pr-20 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary-300 focus:border-primary-400 transition-all rounded-l-xl"
               />
+              <button
+                type="button"
+                onClick={() => setShowImageSearch(true)}
+                className="absolute inset-y-0 right-0 px-3 flex items-center hover:bg-gray-50 transition-colors rounded-r-xl"
+                title="Поиск по изображению"
+              >
+                <span className="text-xl">📷</span>
+              </button>
             </div>
             <button
               type="submit"
-              className="bg-gradient-to-r from-primary-500 to-primary-600 text-white px-6 rounded-r-xl hover:from-primary-600 hover:to-primary-700 hover:shadow-glow transition-all duration-200 font-medium"
+              className="bg-gradient-to-r from-primary-500 to-primary-600 text-white px-6 hover:from-primary-600 hover:to-primary-700 hover:shadow-glow transition-all duration-200 font-medium rounded-r-xl"
             >
               Найти
             </button>
@@ -109,7 +120,7 @@ export const Layout = ({ children }: Props) => {
               </div>
               <div>
                 <div className="font-bold text-gray-800">SyberShop</div>
-                <div className="text-xs text-gray-500">Mock Marketplace</div>
+                <div className="text-xs text-gray-500">Taobao Marketplace</div>
               </div>
             </div>
             <div className="text-sm text-gray-600 max-w-md">
@@ -118,6 +129,11 @@ export const Layout = ({ children }: Props) => {
           </div>
         </div>
       </footer>
+
+      {/* Image Search Modal */}
+      <Modal open={showImageSearch} onClose={() => setShowImageSearch(false)} title="">
+        <ImageSearch onClose={() => setShowImageSearch(false)} />
+      </Modal>
     </div>
   );
 };

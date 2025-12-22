@@ -12,6 +12,7 @@ import { AdminPage } from './pages/AdminPage';
 import { LoginPage } from './pages/LoginPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { AccountPage } from './pages/AccountPage';
+import { SearchResultsPage } from './pages/SearchResultsPage';
 import { RequireAuth, RequireAdmin } from './components/RouteGuards';
 
 const queryClient = new QueryClient();
@@ -37,6 +38,7 @@ function AppInner() {
       <Routes>
         <Route path="/" element={<HomePage />} />
         <Route path="/product/:id" element={<ProductPage />} />
+        <Route path="/search-results" element={<SearchResultsPage />} />
         <Route path="/cart" element={<CartPage />} />
         <Route path="/order/:id" element={<OrderPage />} />
         <Route path="/login" element={<LoginPage />} />
