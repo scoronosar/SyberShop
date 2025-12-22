@@ -33,21 +33,24 @@ export class TaobaoService {
 
     try {
       // TaoWorld Global Supply Platform API
-      // Docs: https://open.taobao.global/doc/doc.htm?docId=90
-      const timestamp = new Date().toISOString().replace(/\.\d{3}Z$/, '+08:00').replace(/[-:]/g, '');
+      // Try multiple methods for compatibility
+      const timestamp = new Date().toISOString().replace(/[-:.]/g, '').replace('Z', '') + '+0800';
+      
+      // Try method 1: taobao.items.list.get (standard Taobao method)
       const params: Record<string, any> = {
-        method: 'taobao.global.seller.goods.list', // Adjust based on your API permissions
+        method: 'taobao.items.list.get',
         app_key: this.appKey,
         timestamp,
         format: 'json',
         v: '2.0',
         sign_method: 'md5',
+        fields: 'num_iid,title,nick,pic_url,price,approve_status',
         page_size: pageSize.toString(),
-        page_num: page.toString(),
+        page_no: page.toString(),
       };
 
       if (query) {
-        params.keyword = query;
+        params.q = query;
       }
 
       params.sign = this.generateSign(params);
@@ -62,21 +65,25 @@ export class TaobaoService {
         return this.getMockProducts(query);
       }
 
-      // Parse TaoWorld response structure
-      const items = response.data?.data?.item_list || [];
+      // Parse response - try multiple structures
+      let items = response.data?.items_list_get_response?.items?.item || 
+                  response.data?.data?.item_list ||
+                  response.data?.item_search_response?.items?.n_item ||
+                  [];
+      
       if (items.length === 0) {
-        this.logger.log('TaoWorld returned no items, using mocks');
+        this.logger.log('TaoWorld/Taobao API returned no items, using mocks');
         return this.getMockProducts(query);
       }
 
-      this.logger.log(`TaoWorld returned ${items.length} items`);
+      this.logger.log(`TaoWorld/Taobao API returned ${items.length} items`);
       return items.map((item: any) => ({
-        id: item.goods_id || item.item_id || `tw-${Date.now()}-${Math.random()}`,
-        title: item.title || item.goods_name || 'TaoWorld Product',
-        price_cny: parseFloat(item.price || item.sale_price || '0'),
-        images: item.pic_url || item.image_url ? [item.pic_url || item.image_url] : ['https://picsum.photos/400/400'],
-        rating: 4.5,
-        sales: parseInt(item.sales || '0', 10),
+        id: item.num_iid || item.item_id || item.goods_id || `tw-${Date.now()}-${Math.random()}`,
+        title: item.title || item.goods_name || 'Taobao Product',
+        price_cny: parseFloat(item.price || item.sale_price || item.zk_final_price || '0'),
+        images: [item.pic_url || item.pict_url || item.image_url || 'https://picsum.photos/400/400'],
+        rating: item.user_type ? 4.5 : 4.0,
+        sales: parseInt(item.volume || item.sales || '0', 10),
         mock: false,
       }));
     } catch (error) {
@@ -91,23 +98,23 @@ export class TaobaoService {
     }
 
     try {
-      const timestamp = new Date().toISOString().replace(/[-:]/g, '').split('.')[0] + '+08:00';
+      const timestamp = new Date().toISOString().replace(/[-:.]/g, '').replace('Z', '') + '+0800';
       const params: Record<string, any> = {
-        method: 'taobao.tbk.item.info.get',
+        method: 'taobao.item.get',
         app_key: this.appKey,
-        session: '',
         timestamp,
         format: 'json',
         v: '2.0',
         sign_method: 'md5',
-        num_iids: itemId,
-        platform: '1',
+        fields: 'num_iid,title,nick,pic_url,price,detail_url,volume,approve_status',
+        num_iid: itemId,
       };
 
       params.sign = this.generateSign(params);
 
+      this.logger.log(`Calling Taobao item.get for ${itemId}`);
       const response = await firstValueFrom(
-        this.http.get(this.apiUrl, { params }),
+        this.http.get(this.apiUrl, { params, timeout: 10000 }),
       );
 
       if (response.data?.error_response) {
@@ -115,17 +122,19 @@ export class TaobaoService {
         return this.getMockProductDetails(itemId);
       }
 
-      const item = response.data?.tbk_item_info_get_response?.results?.n_tbk_item?.[0];
+      const item = response.data?.item_get_response?.item;
       
       if (!item) {
+        this.logger.log('No item data in response, using mock');
         return this.getMockProductDetails(itemId);
       }
 
+      this.logger.log(`Successfully fetched item ${itemId}`);
       return {
         id: item.num_iid || itemId,
-        title: item.title || 'Товар Taobao',
-        price_cny: parseFloat(item.zk_final_price || item.reserve_price || '0'),
-        images: item.pict_url ? [item.pict_url] : ['https://picsum.photos/400/400'],
+        title: item.title || 'Taobao Product',
+        price_cny: parseFloat(item.price || '0'),
+        images: item.pic_url ? [item.pic_url] : ['https://picsum.photos/400/400'],
         rating: 4.5,
         sales: parseInt(item.volume || '0', 10),
         mock: false,
