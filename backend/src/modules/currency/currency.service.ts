@@ -1,10 +1,10 @@
 import { HttpService } from '@nestjs/axios';
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Inject, forwardRef } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Decimal } from '@prisma/client/runtime/library';
 import { firstValueFrom } from 'rxjs';
+import { CurrencyRatesService } from '../currency-rates/currency-rates.service';
 
-const MARKUP = 1.05;
 const SERVICE_FEE = 0.03;
 
 @Injectable()
@@ -16,6 +16,8 @@ export class CurrencyService {
   constructor(
     private readonly http: HttpService,
     private readonly config: ConfigService,
+    @Inject(forwardRef(() => CurrencyRatesService))
+    private readonly currencyRates: CurrencyRatesService,
   ) {}
 
   private async fetchExternalRate(from: string, to: string): Promise<number> {
@@ -61,15 +63,33 @@ export class CurrencyService {
     };
   }
 
-  async applyPricing(amountCny: number, to = 'TJS') {
-    const rate = await this.getFreshRate('CNY', to);
+  async applyPricing(amountCny: number, to = 'RUB') {
+    // Try to get rate from database first
+    const currencyRate = await this.currencyRates.getRate(to);
+    
+    let rate: number;
+    let markup: number;
+    
+    if (currencyRate && currencyRate.isActive) {
+      // Use custom rate from database
+      rate = parseFloat(currencyRate.rateFromCNY.toString());
+      markup = parseFloat(currencyRate.markup.toString());
+      this.logger.log(`Using custom rate for ${to}: ${rate} (markup: ${markup})`);
+    } else {
+      // Fallback to external API
+      this.logger.warn(`No custom rate found for ${to}, using external API`);
+      rate = await this.getFreshRate('CNY', to);
+      markup = 1.05; // Default 5% markup
+    }
+    
     const converted = amountCny * rate;
-    const convertedWithMarkup = converted * MARKUP;
+    const convertedWithMarkup = converted * markup;
     const finalPerItem = convertedWithMarkup * (1 + SERVICE_FEE);
     const serviceFeeAmount = convertedWithMarkup * SERVICE_FEE;
+    
     return {
       rate,
-      rate_with_markup: Number((rate * MARKUP).toFixed(2)),
+      rate_with_markup: Number((rate * markup).toFixed(2)),
       converted: this.round2(converted),
       converted_with_markup: this.round2(convertedWithMarkup),
       final_per_item: this.round2(finalPerItem),

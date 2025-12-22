@@ -5,6 +5,7 @@ import { AppService } from './app.service';
 import { PrismaModule } from './prisma/prisma.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { CurrencyModule } from './modules/currency/currency.module';
+import { CurrencyRatesModule } from './modules/currency-rates/currency-rates.module';
 import { ProductsModule } from './modules/products/products.module';
 import { CartModule } from './modules/cart/cart.module';
 import { OrdersModule } from './modules/orders/orders.module';
@@ -20,6 +21,7 @@ import { HttpModule } from '@nestjs/axios';
     PrismaModule,
     AuthModule,
     CurrencyModule,
+    CurrencyRatesModule,
     ProductsModule,
     CartModule,
     OrdersModule,

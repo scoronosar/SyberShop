@@ -1,10 +1,12 @@
 import { create } from 'zustand';
 
+export type SupportedCurrency = 'RUB' | 'USD' | 'UZS' | 'TJS' | 'KZT' | 'CNY';
+
 type SettingsState = {
   language: 'ru' | 'en';
-  currency: 'RUB' | 'USD';
+  currency: SupportedCurrency;
   setLanguage: (lang: 'ru' | 'en') => void;
-  setCurrency: (cur: 'RUB' | 'USD') => void;
+  setCurrency: (cur: SupportedCurrency) => void;
 };
 
 const storedLanguage = (typeof window !== 'undefined' && localStorage.getItem('sybershop_lang')) as
@@ -12,8 +14,7 @@ const storedLanguage = (typeof window !== 'undefined' && localStorage.getItem('s
   | 'en'
   | null;
 const storedCurrency = (typeof window !== 'undefined' && localStorage.getItem('sybershop_cur')) as
-  | 'RUB'
-  | 'USD'
+  | SupportedCurrency
   | null;
 
 export const useSettingsStore = create<SettingsState>((set) => ({

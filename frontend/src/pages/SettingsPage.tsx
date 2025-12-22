@@ -1,10 +1,17 @@
-import { useSettingsStore } from '../state/settings';
+import { useSettingsStore, type SupportedCurrency } from '../state/settings';
+import { useQuery } from '@tanstack/react-query';
+import { getActiveCurrencies } from '../api/currency-rates';
 
 export const SettingsPage = () => {
   const language = useSettingsStore((s) => s.language);
   const currency = useSettingsStore((s) => s.currency);
   const setLanguage = useSettingsStore((s) => s.setLanguage);
   const setCurrency = useSettingsStore((s) => s.setCurrency);
+
+  const { data: availableCurrencies } = useQuery({
+    queryKey: ['currencies'],
+    queryFn: getActiveCurrencies,
+  });
 
   return (
     <div className="max-w-2xl mx-auto">
@@ -42,14 +49,28 @@ export const SettingsPage = () => {
             </label>
             <select
               value={currency}
-              onChange={(e) => setCurrency(e.target.value as 'RUB' | 'USD')}
+              onChange={(e) => setCurrency(e.target.value as SupportedCurrency)}
               className="input-field bg-white"
             >
-              <option value="RUB">RUB (₽)</option>
-              <option value="USD">USD ($)</option>
+              {availableCurrencies && availableCurrencies.length > 0 ? (
+                availableCurrencies.map((curr) => (
+                  <option key={curr.currency} value={curr.currency}>
+                    {curr.code} ({curr.symbol}) - {curr.name}
+                  </option>
+                ))
+              ) : (
+                <>
+                  <option value="RUB">RUB (₽) - Российский рубль</option>
+                  <option value="USD">USD ($) - US Dollar</option>
+                  <option value="UZS">UZS (сўм) - Узбекский сум</option>
+                  <option value="TJS">TJS (ЅМ) - Таджикский сомони</option>
+                  <option value="KZT">KZT (₸) - Казахстанский тенге</option>
+                  <option value="CNY">CNY (¥) - Китайский юань</option>
+                </>
+              )}
             </select>
             <div className="mt-3 text-xs text-gray-700 bg-white/60 p-3 rounded-lg">
-              ℹ️ Меняет только отображение на фронте. Серверная цена в локальной валюте остаётся источником истины.
+              ℹ️ Цены автоматически пересчитываются по курсу из админ-панели. Курсы настраиваются администратором.
             </div>
           </div>
         </div>

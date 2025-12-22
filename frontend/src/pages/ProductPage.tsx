@@ -15,7 +15,18 @@ export const ProductPage = () => {
   const queryClient = useQueryClient();
   const role = useAuthStore((s) => s.role);
   const currency = useSettingsStore((s) => s.currency);
-  const currencySymbol = currency === 'USD' ? '$' : '₽';
+  
+  // Currency symbols mapping
+  const currencySymbols: Record<string, string> = {
+    'RUB': '₽',
+    'USD': '$',
+    'UZS': 'сўм',
+    'TJS': 'ЅМ',
+    'KZT': '₸',
+    'CNY': '¥',
+  };
+  const currencySymbol = currencySymbols[currency] || currency;
+  
   const [showBreakdown, setShowBreakdown] = useState(false);
   const [openPriceModal, setOpenPriceModal] = useState(false);
 

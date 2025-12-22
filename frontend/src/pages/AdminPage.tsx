@@ -4,6 +4,7 @@ import { useSettingsStore } from '../state/settings';
 import { createCargo, arriveCargo } from '../api/logistics';
 import { createAdmin } from '../api/auth';
 import { getOAuthStatus, initiateOAuth, refreshOAuthToken } from '../api/oauth';
+import { getAllCurrencyRates, updateCurrencyRate } from '../api/currency-rates';
 import { useState } from 'react';
 import type { FormEvent } from 'react';
 import toast from 'react-hot-toast';
@@ -25,9 +26,25 @@ export const AdminPage = () => {
     },
   });
 
+  const { data: currencyRates, refetch: refetchCurrencyRates } = useQuery({
+    queryKey: ['currency-rates'],
+    queryFn: getAllCurrencyRates,
+  });
+
   const currency = useSettingsStore((s) => s.currency);
-  const currencySymbol = currency === 'USD' ? '$' : '₽';
+  const currencySymbols: Record<string, string> = {
+    'RUB': '₽',
+    'USD': '$',
+    'UZS': 'сўм',
+    'TJS': 'ЅМ',
+    'KZT': '₸',
+    'CNY': '¥',
+  };
+  const currencySymbol = currencySymbols[currency] || currency;
   const queryClient = useQueryClient();
+
+  const [editingCurrency, setEditingCurrency] = useState<string | null>(null);
+  const [editValues, setEditValues] = useState<{ rate: string; markup: string }>({ rate: '', markup: '' });
 
   const [orderIdsInput, setOrderIdsInput] = useState('');
   const [cargoCost, setCargoCost] = useState<string>('');
@@ -80,6 +97,19 @@ export const AdminPage = () => {
     onError: () => toast.error('Не удалось обновить токен'),
   });
 
+  const updateCurrencyMutation = useMutation({
+    mutationFn: ({ currency: curr, data }: { currency: string; data: any }) =>
+      updateCurrencyRate(curr, data),
+    onSuccess: () => {
+      toast.success('Курс валюты обновлён');
+      refetchCurrencyRates();
+      queryClient.invalidateQueries({ queryKey: ['products'] });
+      queryClient.invalidateQueries({ queryKey: ['product'] });
+      setEditingCurrency(null);
+    },
+    onError: () => toast.error('Не удалось обновить курс'),
+  });
+
   const handleConnectTaoWorld = () => {
     initiateOAuth();
     // Listen for OAuth success message
@@ -91,6 +121,31 @@ export const AdminPage = () => {
       clearInterval(checkInterval);
       refetchOAuth();
     }, 60000); // Stop checking after 1 minute
+  };
+
+  const startEditCurrency = (curr: any) => {
+    setEditingCurrency(curr.currency);
+    setEditValues({
+      rate: curr.rateFromCNY.toString(),
+      markup: curr.markup.toString(),
+    });
+  };
+
+  const saveEditCurrency = (curr: string) => {
+    updateCurrencyMutation.mutate({
+      currency: curr,
+      data: {
+        rateFromCNY: parseFloat(editValues.rate),
+        markup: parseFloat(editValues.markup),
+      },
+    });
+  };
+
+  const toggleCurrencyActive = (curr: string, isActive: boolean) => {
+    updateCurrencyMutation.mutate({
+      currency: curr,
+      data: { isActive: !isActive },
+    });
   };
 
   const submitCreate = (e: FormEvent) => {
@@ -296,6 +351,120 @@ export const AdminPage = () => {
               {createAdminMutation.isPending ? '⏳ Создаём...' : '✓ Создать администратора'}
             </button>
           </form>
+        </div>
+
+        <div className="card p-6 space-y-4 bg-gradient-to-br from-white to-green-50/30">
+          <div className="flex items-center gap-2">
+            <span className="text-xl">💱</span>
+            <h2 className="text-xl font-bold text-gray-900">Курсы валют</h2>
+          </div>
+          
+          <p className="text-sm text-gray-600">
+            Настройте курс конвертации из китайского юаня (CNY) в другие валюты и процент наценки.
+          </p>
+
+          {currencyRates && currencyRates.length > 0 ? (
+            <div className="space-y-3">
+              {currencyRates.map((rate) => (
+                <div
+                  key={rate.currency}
+                  className={`p-4 rounded-lg border-2 transition-all ${
+                    rate.isActive
+                      ? 'bg-white border-green-200'
+                      : 'bg-gray-50 border-gray-300 opacity-60'
+                  }`}
+                >
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-3">
+                      <span className="text-2xl">{rate.symbol}</span>
+                      <div>
+                        <div className="font-bold text-gray-900 flex items-center gap-2">
+                          {rate.name}
+                          <span className="text-xs font-mono bg-gray-100 px-2 py-0.5 rounded">
+                            {rate.code}
+                          </span>
+                        </div>
+                        {editingCurrency === rate.currency ? (
+                          <div className="flex gap-2 mt-2">
+                            <div className="flex items-center gap-1">
+                              <span className="text-xs text-gray-600">Курс:</span>
+                              <input
+                                type="number"
+                                step="0.0001"
+                                value={editValues.rate}
+                                onChange={(e) =>
+                                  setEditValues({ ...editValues, rate: e.target.value })
+                                }
+                                className="input-field w-24 text-sm py-1"
+                              />
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <span className="text-xs text-gray-600">Наценка:</span>
+                              <input
+                                type="number"
+                                step="0.01"
+                                value={editValues.markup}
+                                onChange={(e) =>
+                                  setEditValues({ ...editValues, markup: e.target.value })
+                                }
+                                className="input-field w-20 text-sm py-1"
+                              />
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="text-xs text-gray-600 mt-1">
+                            1 CNY (¥) = {rate.rateFromCNY} {rate.symbol} × {rate.markup} (наценка)
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      {editingCurrency === rate.currency ? (
+                        <>
+                          <button
+                            onClick={() => saveEditCurrency(rate.currency)}
+                            className="px-3 py-1 bg-green-500 text-white text-xs font-bold rounded-lg hover:bg-green-600"
+                          >
+                            ✓ Сохранить
+                          </button>
+                          <button
+                            onClick={() => setEditingCurrency(null)}
+                            className="px-3 py-1 bg-gray-400 text-white text-xs font-bold rounded-lg hover:bg-gray-500"
+                          >
+                            ✕ Отмена
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          <button
+                            onClick={() => startEditCurrency(rate)}
+                            className="px-3 py-1 bg-blue-500 text-white text-xs font-bold rounded-lg hover:bg-blue-600"
+                          >
+                            ✎ Изменить
+                          </button>
+                          <button
+                            onClick={() => toggleCurrencyActive(rate.currency, rate.isActive)}
+                            className={`px-3 py-1 text-xs font-bold rounded-lg ${
+                              rate.isActive
+                                ? 'bg-yellow-500 hover:bg-yellow-600 text-white'
+                                : 'bg-green-500 hover:bg-green-600 text-white'
+                            }`}
+                          >
+                            {rate.isActive ? '⏸ Отключить' : '▶ Включить'}
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-4 text-gray-500">
+              <div className="text-3xl mb-2">💱</div>
+              <p className="text-sm">Загрузка курсов валют...</p>
+            </div>
+          )}
         </div>
 
         <div className="card p-6 space-y-4 bg-gradient-to-br from-white to-orange-50/30">
