@@ -42,7 +42,6 @@ export const HomePage = () => {
         currency,
       }),
   });
-  const { t } = useTranslation();
 
   // Invalidate product queries when currency changes
   useEffect(() => {

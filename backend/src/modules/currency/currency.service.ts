@@ -51,9 +51,22 @@ export class CurrencyService {
     return rate;
   }
 
-  async getRate(from = 'CNY', to = 'TJS') {
-    const rate = await this.getFreshRate(from, to);
-    const rateWithMarkup = Number((rate * MARKUP).toFixed(2));
+  async getRate(from = 'CNY', to = 'RUB') {
+    // Try to get rate from database first
+    const currencyRate = await this.currencyRates.getRate(to);
+    
+    let rate: number;
+    let markup: number;
+    
+    if (currencyRate && currencyRate.isActive) {
+      rate = parseFloat(currencyRate.rateFromCNY.toString());
+      markup = parseFloat(currencyRate.markup.toString());
+    } else {
+      rate = await this.getFreshRate(from, to);
+      markup = 1.05; // Default 5% markup
+    }
+    
+    const rateWithMarkup = Number((rate * markup).toFixed(2));
     return {
       from,
       to,
