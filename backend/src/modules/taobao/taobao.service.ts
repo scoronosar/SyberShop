@@ -35,61 +35,55 @@ export class TaobaoService {
     }
 
     try {
-      // TaoWorld Global Supply Platform API - /product/spus/get
-      // Docs: https://open.taobao.global/doc/api.htm#/api?cid=4&path=/product/spus/get
-      // Note: This works WITHOUT access_token for already distributed products
+      // TaoWorld Traffic API - /traffic/item/search (NO access_token needed!)
+      // Docs: https://open.taobao.global/doc/api.htm#/api?path=/traffic/item/search
       const timestamp = Date.now().toString();
-      const apiPath = '/product/spus/get';
+      const apiPath = '/traffic/item/search';
       
       const params: Record<string, any> = {
         app_key: this.appKey,
         timestamp,
         sign_method: 'sha256',
-        page_size: pageSize.toString(),
         page_no: page.toString(),
+        page_size: pageSize.toString(),
       };
 
-      // TaoWorld signature: API_PATH + sorted params
+      if (query) {
+        params.keyword = query;
+      }
+
       params.sign = this.generateSign(apiPath, params);
 
-      this.logger.log(`Calling TaoWorld API: ${apiPath}`);
+      this.logger.log(`Calling TaoWorld Traffic Search API: ${apiPath} keyword="${query}"`);
       const response = await firstValueFrom(
         this.http.get(`${this.apiUrl}${apiPath}`, { params, timeout: 10000 }),
       );
 
-      if (response.data?.error_code && response.data?.error_code !== '0') {
-        this.logger.warn(`TaoWorld API error: ${JSON.stringify(response.data)}, falling back to mock`);
+      if (response.data?.biz_error_code || (response.data?.code && response.data.code !== '0')) {
+        this.logger.warn(`TaoWorld Traffic API error: ${JSON.stringify(response.data)}, falling back to mock`);
         return this.getMockProducts(query);
       }
 
-      const productList = response.data?.data?.product_list || [];
+      const items = response.data?.data?.data || [];
       
-      if (!Array.isArray(productList) || productList.length === 0) {
-        this.logger.log('TaoWorld returned no distributed products, using mocks');
+      if (!Array.isArray(items) || items.length === 0) {
+        this.logger.log('TaoWorld Traffic API returned no items, using mocks');
         return this.getMockProducts(query);
       }
 
-      this.logger.log(`TaoWorld returned ${productList.length} distributed products`);
+      this.logger.log(`TaoWorld Traffic API returned ${items.length} real Taobao items!`);
       
-      // Filter by query if provided
-      let filteredList = productList;
-      if (query) {
-        filteredList = productList.filter((item: any) => 
-          (item.title || item.cn_title || '').toLowerCase().includes(query.toLowerCase())
-        );
-      }
-
-      return filteredList.slice(0, pageSize).map((item: any) => ({
-        id: item.item_id || `tw-${Date.now()}-${Math.random()}`,
-        title: item.title || item.cn_title || 'TaoWorld Product',
-        price_cny: parseFloat(item.price || '0') / 100, // TaoWorld prices in cents
-        images: item.images ? JSON.parse(item.images) : ['https://picsum.photos/400/400'],
-        rating: parseFloat(item.material_quality_score || '0') / 20 || 4.0, // Score 0-100 -> rating 0-5
-        sales: 0, // Not provided in spus/get
+      return items.map((item: any) => ({
+        id: item.item_id?.toString() || `tw-${Date.now()}-${Math.random()}`,
+        title: item.title || 'Taobao Product',
+        price_cny: parseFloat(item.price || '0'), // Already in yuan
+        images: [item.main_image_url || 'https://picsum.photos/400/400'],
+        rating: 4.5,
+        sales: item.inventory || 0,
         mock: false,
       }));
     } catch (error) {
-      this.logger.error(`Failed to fetch from TaoWorld API: ${error.message}`, error.stack);
+      this.logger.error(`Failed to fetch from TaoWorld Traffic API: ${error.message}`, error.stack);
       return this.getMockProducts(query);
     }
   }
@@ -100,49 +94,50 @@ export class TaobaoService {
     }
 
     try {
-      // TaoWorld API: /product/details/query
-      // Docs: https://open.taobao.global/doc/api.htm#/api?cid=4&path=/product/details/query
+      // TaoWorld Traffic API: /traffic/item/get (NO access_token needed!)
+      // Docs: https://open.taobao.global/doc/api.htm#/api?path=/traffic/item/get
       const timestamp = Date.now().toString();
-      const apiPath = '/product/details/query';
+      const apiPath = '/traffic/item/get';
       
       const params: Record<string, any> = {
         app_key: this.appKey,
         timestamp,
         sign_method: 'sha256',
-        item_id_list: JSON.stringify([itemId]),
+        item_resource: 'taobao',
+        item_id: itemId,
       };
 
       params.sign = this.generateSign(apiPath, params);
 
-      this.logger.log(`Calling TaoWorld ${apiPath} for ${itemId}`);
+      this.logger.log(`Calling TaoWorld Traffic item.get for ${itemId}`);
       const response = await firstValueFrom(
         this.http.get(`${this.apiUrl}${apiPath}`, { params, timeout: 10000 }),
       );
 
-      if (response.data?.error_code && response.data?.error_code !== '0') {
-        this.logger.warn(`TaoWorld item details error: ${JSON.stringify(response.data)}`);
+      if (response.data?.biz_error_code || (response.data?.code && response.data.code !== '0')) {
+        this.logger.warn(`TaoWorld Traffic item error: ${JSON.stringify(response.data)}`);
         return this.getMockProductDetails(itemId);
       }
 
-      const item = response.data?.data?.goods_info_list?.[0];
+      const item = response.data?.data;
       
       if (!item) {
         this.logger.log('No item data in response, using mock');
         return this.getMockProductDetails(itemId);
       }
 
-      this.logger.log(`Successfully fetched TaoWorld item ${itemId}`);
+      this.logger.log(`Successfully fetched real Taobao item ${itemId}`);
       return {
-        id: item.item_id || itemId,
-        title: item.title || item.short_title || 'TaoWorld Product',
-        price_cny: parseFloat(item.price || '0') / 100, // Price in cents
-        images: item.images || ['https://picsum.photos/400/400'],
+        id: item.item_id?.toString() || itemId,
+        title: item.title || 'Taobao Product',
+        price_cny: parseFloat(item.price || item.promotion_price || '0') / 100, // Price in cents
+        images: item.pic_urls || [item.main_image_url] || ['https://picsum.photos/400/400'],
         rating: 4.5,
-        sales: item.inventory || 0,
+        sales: item.sku_list?.reduce((sum: number, sku: any) => sum + (sku.quantity || 0), 0) || 0,
         mock: false,
       };
     } catch (error) {
-      this.logger.error(`Failed to get TaoWorld product details: ${error.message}`);
+      this.logger.error(`Failed to get TaoWorld Traffic item: ${error.message}`);
       return this.getMockProductDetails(itemId);
     }
   }
