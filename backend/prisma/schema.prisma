@@ -131,12 +131,19 @@ model Tracker {
   assignedCargoId String?
 }
 
-model AppCredentials {
-  id           String @id @default(uuid())
-  taobaoAppKey String?
-  taobaoSecret String?
-  accessToken  String?
-  refreshToken String?
-  createdAt    DateTime @default(now())
+model TaoworldToken {
+  id                String   @id @default(uuid())
+  accessToken       String   @unique
+  refreshToken      String?
+  expiresAt         DateTime
+  refreshExpiresAt  DateTime?
+  accountId         String?
+  sellerId          String?
+  userId            String?
+  accountPlatform   String?
+  shortCode         String?
+  account           String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
 }
 

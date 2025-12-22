@@ -10,6 +10,7 @@ import { CartModule } from './modules/cart/cart.module';
 import { OrdersModule } from './modules/orders/orders.module';
 import { LogisticsModule } from './modules/logistics/logistics.module';
 import { AdminModule } from './modules/admin/admin.module';
+import { OAuthModule } from './modules/oauth/oauth.module';
 import { HttpModule } from '@nestjs/axios';
 
 @Module({
@@ -24,6 +25,7 @@ import { HttpModule } from '@nestjs/axios';
     OrdersModule,
     LogisticsModule,
     AdminModule,
+    OAuthModule,
   ],
   controllers: [AppController],
   providers: [AppService],

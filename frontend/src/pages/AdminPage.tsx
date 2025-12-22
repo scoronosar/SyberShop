@@ -3,6 +3,7 @@ import { api } from '../lib/api';
 import { useSettingsStore } from '../state/settings';
 import { createCargo, arriveCargo } from '../api/logistics';
 import { createAdmin } from '../api/auth';
+import { getOAuthStatus, initiateOAuth, refreshOAuthToken } from '../api/oauth';
 import { useState } from 'react';
 import type { FormEvent } from 'react';
 import toast from 'react-hot-toast';
@@ -15,6 +16,15 @@ export const AdminPage = () => {
       return res.data as any[];
     },
   });
+
+  const { data: oauthStatus, refetch: refetchOAuth } = useQuery({
+    queryKey: ['oauth-status'],
+    queryFn: async () => {
+      const res = await getOAuthStatus();
+      return res.data as { connected: boolean; account?: string; expiresAt?: string };
+    },
+  });
+
   const currency = useSettingsStore((s) => s.currency);
   const currencySymbol = currency === 'USD' ? '$' : '₽';
   const queryClient = useQueryClient();
@@ -60,6 +70,28 @@ export const AdminPage = () => {
     },
     onError: () => toast.error('Не удалось создать админа'),
   });
+
+  const refreshTokenMutation = useMutation({
+    mutationFn: refreshOAuthToken,
+    onSuccess: () => {
+      toast.success('Токен обновлён');
+      refetchOAuth();
+    },
+    onError: () => toast.error('Не удалось обновить токен'),
+  });
+
+  const handleConnectTaoWorld = () => {
+    initiateOAuth();
+    // Listen for OAuth success message
+    const checkInterval = setInterval(() => {
+      refetchOAuth();
+    }, 2000);
+    
+    setTimeout(() => {
+      clearInterval(checkInterval);
+      refetchOAuth();
+    }, 60000); // Stop checking after 1 minute
+  };
 
   const submitCreate = (e: FormEvent) => {
     e.preventDefault();
@@ -112,7 +144,7 @@ export const AdminPage = () => {
               </tr>
             </thead>
             <tbody>
-              {data?.map((order, idx) => (
+              {data?.map((order: any, idx: number) => (
                 <tr key={order.id} className={`border-t hover:bg-primary-50/50 transition-colors ${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}`}>
                   <td className="px-4 py-3 font-mono text-xs text-gray-900 font-semibold">{order.id}</td>
                   <td className="px-4 py-3">
@@ -264,6 +296,57 @@ export const AdminPage = () => {
               {createAdminMutation.isPending ? '⏳ Создаём...' : '✓ Создать администратора'}
             </button>
           </form>
+        </div>
+
+        <div className="card p-6 space-y-4 bg-gradient-to-br from-white to-orange-50/30">
+          <div className="flex items-center gap-2">
+            <span className="text-xl">🔗</span>
+            <h2 className="text-xl font-bold text-gray-900">TaoWorld API</h2>
+          </div>
+          
+          {oauthStatus?.connected ? (
+            <div className="space-y-4">
+              <div className="p-4 bg-green-50 border-2 border-green-300 rounded-lg">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-green-600 text-xl">✓</span>
+                  <span className="font-bold text-green-800">Подключено</span>
+                </div>
+                <p className="text-sm text-gray-700">
+                  <span className="font-semibold">Аккаунт:</span> {oauthStatus.account || 'Unknown'}
+                </p>
+                {oauthStatus.expiresAt && (
+                  <p className="text-xs text-gray-600 mt-1">
+                    Токен действителен до: {new Date(oauthStatus.expiresAt).toLocaleString()}
+                  </p>
+                )}
+              </div>
+              <button
+                onClick={() => refreshTokenMutation.mutate()}
+                disabled={refreshTokenMutation.isPending}
+                className="btn-secondary w-full"
+              >
+                {refreshTokenMutation.isPending ? '⏳ Обновляем...' : '🔄 Обновить токен'}
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div className="p-4 bg-yellow-50 border-2 border-yellow-300 rounded-lg">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-yellow-600 text-xl">⚠️</span>
+                  <span className="font-bold text-yellow-800">Не подключено</span>
+                </div>
+                <p className="text-sm text-gray-700">
+                  Подключите TaoWorld аккаунт для получения реальных данных товаров из Taobao API.
+                </p>
+              </div>
+              <button
+                onClick={handleConnectTaoWorld}
+                className="btn-primary w-full"
+              >
+                🔗 Подключить TaoWorld
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </div>

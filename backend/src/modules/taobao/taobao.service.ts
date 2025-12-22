@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
 import { firstValueFrom } from 'rxjs';
 import * as crypto from 'crypto';
+import { OAuthService } from '../oauth/oauth.service';
 
 @Injectable()
 export class TaobaoService {
@@ -11,7 +12,10 @@ export class TaobaoService {
   private readonly apiUrl = 'https://api.taobao.global/rest';
   private readonly mode = process.env.TAOBAO_MODE || 'PROD';
 
-  constructor(private readonly http: HttpService) {}
+  constructor(
+    private readonly http: HttpService,
+    private readonly oauthService: OAuthService,
+  ) {}
 
   private generateSign(apiPath: string, params: Record<string, any>): string {
     // TaoWorld uses HMAC-SHA256 (not MD5!) and includes API path in signature
@@ -34,8 +38,16 @@ export class TaobaoService {
       return this.getMockProducts(query);
     }
 
+    // Get valid access token from OAuth
+    const accessToken = await this.oauthService.getValidAccessToken();
+    
+    if (!accessToken) {
+      this.logger.warn('No valid TaoWorld OAuth token, using mock data. Please connect TaoWorld account in admin panel.');
+      return this.getMockProducts(query);
+    }
+
     try {
-      // TaoWorld Traffic API - /traffic/item/search (NO access_token needed!)
+      // TaoWorld Traffic API - /traffic/item/search (requires access_token)
       // Docs: https://open.taobao.global/doc/api.htm#/api?path=/traffic/item/search
       const timestamp = Date.now().toString();
       const apiPath = '/traffic/item/search';
@@ -46,6 +58,7 @@ export class TaobaoService {
         sign_method: 'sha256',
         page_no: page.toString(),
         page_size: pageSize.toString(),
+        access_token: accessToken,
       };
 
       if (query) {
@@ -76,7 +89,7 @@ export class TaobaoService {
       return items.map((item: any) => ({
         id: item.item_id?.toString() || `tw-${Date.now()}-${Math.random()}`,
         title: item.title || 'Taobao Product',
-        price_cny: parseFloat(item.price || '0'), // Already in yuan
+        price_cny: parseFloat(item.price || '0') / 100, // Price in cents
         images: [item.main_image_url || 'https://picsum.photos/400/400'],
         rating: 4.5,
         sales: item.inventory || 0,
@@ -93,8 +106,16 @@ export class TaobaoService {
       return this.getMockProductDetails(itemId);
     }
 
+    // Get valid access token from OAuth
+    const accessToken = await this.oauthService.getValidAccessToken();
+    
+    if (!accessToken) {
+      this.logger.warn('No valid TaoWorld OAuth token, using mock data. Please connect TaoWorld account in admin panel.');
+      return this.getMockProductDetails(itemId);
+    }
+
     try {
-      // TaoWorld Traffic API: /traffic/item/get (NO access_token needed!)
+      // TaoWorld Traffic API: /traffic/item/get (requires access_token)
       // Docs: https://open.taobao.global/doc/api.htm#/api?path=/traffic/item/get
       const timestamp = Date.now().toString();
       const apiPath = '/traffic/item/get';
@@ -105,6 +126,7 @@ export class TaobaoService {
         sign_method: 'sha256',
         item_resource: 'taobao',
         item_id: itemId,
+        access_token: accessToken,
       };
 
       params.sign = this.generateSign(apiPath, params);
