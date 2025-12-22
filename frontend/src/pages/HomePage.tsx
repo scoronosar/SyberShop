@@ -1,11 +1,23 @@
 import { useSearchParams } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { fetchProducts } from '../api/products';
 import { ProductCard } from '../components/ProductCard';
 import { useTranslation } from 'react-i18next';
-import { useCallback } from 'react';
+import { useCallback, useState, useEffect } from 'react';
 import { useSettingsStore } from '../state/settings';
 import { motion } from 'framer-motion';
+
+const CATEGORIES = [
+  { id: 'all', name: 'Все товары', icon: '🏪', query: '' },
+  { id: 'electronics', name: 'Электроника', icon: '📱', query: '数码产品' },
+  { id: 'fashion_women', name: 'Женская мода', icon: '👗', query: '时尚女装' },
+  { id: 'fashion_men', name: 'Мужская мода', icon: '👔', query: '潮流男装' },
+  { id: 'sports', name: 'Спорт', icon: '⚽', query: '运动户外' },
+  { id: 'home', name: 'Дом', icon: '🏠', query: '家居用品' },
+  { id: 'beauty', name: 'Красота', icon: '💄', query: '美妆护肤' },
+  { id: 'accessories', name: 'Аксессуары', icon: '👜', query: '包包饰品' },
+  { id: 'gifts', name: 'Подарки', icon: '🎁', query: '创意礼品' },
+];
 
 export const HomePage = () => {
   const [searchParams] = useSearchParams();
@@ -15,8 +27,11 @@ export const HomePage = () => {
   const priceMax = searchParams.get('price_max') ?? '';
   const availability = searchParams.get('availability') ?? '';
   const currency = useSettingsStore((s) => s.currency);
+  const [selectedCategory, setSelectedCategory] = useState('all');
+  const queryClient = useQueryClient();
+  
   const { data, isLoading } = useQuery({
-    queryKey: ['products', q, sort, priceMin, priceMax, availability],
+    queryKey: ['products', q, sort, priceMin, priceMax, availability, currency],
     queryFn: () =>
       fetchProducts({
         query: q,
@@ -29,6 +44,12 @@ export const HomePage = () => {
   });
   const { t } = useTranslation();
 
+  // Invalidate product queries when currency changes
+  useEffect(() => {
+    queryClient.invalidateQueries({ queryKey: ['products'] });
+    queryClient.invalidateQueries({ queryKey: ['product'] });
+  }, [currency, queryClient]);
+
   const updateParam = useCallback(
     (key: string, value: string) => {
       const next = new URLSearchParams(searchParams);
@@ -38,6 +59,11 @@ export const HomePage = () => {
     },
     [searchParams],
   );
+
+  const handleCategoryClick = (category: typeof CATEGORIES[0]) => {
+    setSelectedCategory(category.id);
+    updateParam('q', category.query);
+  };
 
   return (
     <div className="space-y-8">
@@ -54,38 +80,60 @@ export const HomePage = () => {
             <div className="space-y-4">
               <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/20 backdrop-blur-sm border border-white/30">
                 <div className="w-2 h-2 rounded-full bg-green-300 animate-pulse" />
-                <span className="text-sm font-medium">SyberShop · Mock Marketplace</span>
+                <span className="text-sm font-medium">SyberShop · Taobao Marketplace</span>
               </div>
               <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold leading-tight">
-                Чистый и быстрый<br />поиск товаров
+                Товары из Китая<br />с доставкой
               </h1>
               <p className="text-base sm:text-lg opacity-95 max-w-2xl leading-relaxed">
-                Итоговые цены считаются на сервере с конвертацией и сервисным сбором. 
-                Доставка добавится при прибытии карго.
+                Цены с конвертацией валюты и сервисным сбором. 
+                Доставка рассчитывается при прибытии груза.
               </p>
             </div>
             <div className="flex flex-wrap gap-2.5">
-              <span className="px-4 py-2 rounded-xl bg-white/25 backdrop-blur-sm border border-white/30 text-sm font-medium shadow-lg">
-                {t('badges.mock')}
-              </span>
-              <span className="px-4 py-2 rounded-xl bg-white/25 backdrop-blur-sm border border-white/30 text-sm font-medium shadow-lg">
-                {t('badges.server')}
-              </span>
-              <span className="px-4 py-2 rounded-xl bg-white/25 backdrop-blur-sm border border-white/30 text-sm font-medium shadow-lg">
-                {t('badges.delivery')}
-              </span>
               {q && (
                 <span className="px-4 py-2 rounded-xl bg-white/30 backdrop-blur-sm border border-white/40 text-sm font-semibold shadow-lg">
-                  🔍 Поиск: {q}
+                  🔍 {q}
                 </span>
               )}
-              {currency && (
-                <span className="px-4 py-2 rounded-xl bg-white/30 backdrop-blur-sm border border-white/40 text-sm font-semibold shadow-lg">
-                  💰 {currency}
-                </span>
-              )}
+              <span className="px-4 py-2 rounded-xl bg-white/30 backdrop-blur-sm border border-white/40 text-sm font-semibold shadow-lg">
+                💰 {currency}
+              </span>
             </div>
           </div>
+        </div>
+      </motion.div>
+
+      {/* Categories */}
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.5, delay: 0.2 }}
+        className="card p-6"
+      >
+        <h2 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
+          <span>🏷️</span>
+          <span>Категории товаров</span>
+        </h2>
+        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-9 gap-3">
+          {CATEGORIES.map((category) => (
+            <button
+              key={category.id}
+              onClick={() => handleCategoryClick(category)}
+              className={`p-4 rounded-xl border-2 transition-all duration-200 hover:scale-105 ${
+                selectedCategory === category.id
+                  ? 'bg-gradient-to-br from-primary-500 to-primary-400 text-white border-primary-400 shadow-lg'
+                  : 'bg-white border-gray-200 hover:border-primary-300 hover:shadow-md'
+              }`}
+            >
+              <div className="text-2xl mb-2">{category.icon}</div>
+              <div className={`text-xs font-semibold ${
+                selectedCategory === category.id ? 'text-white' : 'text-gray-700'
+              }`}>
+                {category.name}
+              </div>
+            </button>
+          ))}
         </div>
       </motion.div>
 

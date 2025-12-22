@@ -11,6 +11,14 @@ export type Product = {
   mock: boolean;
   rating?: number;
   sales?: number;
+  inventory?: number;
+  description?: string;
+  category?: string;
+  brand?: string;
+  shop_name?: string;
+  video_url?: string;
+  sku_list?: any[];
+  properties?: any[];
 };
 
 type ProductQuery = {

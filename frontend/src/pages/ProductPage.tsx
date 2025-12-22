@@ -74,7 +74,7 @@ export const ProductPage = () => {
           {data.rating && (
             <span className="px-3 py-1.5 bg-gradient-to-r from-yellow-100 to-amber-100 text-yellow-700 rounded-lg text-xs font-bold border border-yellow-200 flex items-center gap-1">
               <span>⭐</span>
-              <span>{data.rating}</span>
+              <span>{data.rating.toFixed(1)}</span>
             </span>
           )}
           {data.sales && (
@@ -82,11 +82,40 @@ export const ProductPage = () => {
               🔥 {data.sales} продаж
             </span>
           )}
+          {data.inventory !== undefined && (
+            <span className="px-3 py-1.5 bg-gradient-to-r from-purple-100 to-indigo-100 text-purple-700 rounded-lg text-xs font-bold border border-purple-200">
+              📦 {data.inventory} в наличии
+            </span>
+          )}
         </div>
         
         <h1 className="text-3xl lg:text-4xl font-extrabold leading-tight text-gray-900">
           {data.title}
         </h1>
+
+        {/* Additional Info */}
+        {(data.brand || data.category || data.shop_name) && (
+          <div className="flex flex-wrap gap-4 text-sm text-gray-600">
+            {data.brand && (
+              <div className="flex items-center gap-2">
+                <span className="font-semibold text-gray-700">🏷️ Бренд:</span>
+                <span>{data.brand}</span>
+              </div>
+            )}
+            {data.category && (
+              <div className="flex items-center gap-2">
+                <span className="font-semibold text-gray-700">📂 Категория:</span>
+                <span>{data.category}</span>
+              </div>
+            )}
+            {data.shop_name && (
+              <div className="flex items-center gap-2">
+                <span className="font-semibold text-gray-700">🏪 Магазин:</span>
+                <span>{data.shop_name}</span>
+              </div>
+            )}
+          </div>
+        )}
 
         <div className="card p-6 space-y-4 bg-gradient-to-br from-white to-orange-50/30">
           <div className="flex items-baseline justify-between">
@@ -159,6 +188,68 @@ export const ProductPage = () => {
           </div>
           <div className="text-sm text-gray-600 bg-blue-50 border border-blue-200 rounded-lg p-3">
             📦 Доставка будет начислена после прибытия груза (cargo arrival).
+          </div>
+        </div>
+
+        {/* Video */}
+        {data.video_url && (
+          <div className="card p-6 space-y-4">
+            <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
+              <span>🎥</span>
+              <span>Видео товара</span>
+            </h3>
+            <video 
+              controls 
+              className="w-full rounded-xl shadow-lg"
+              poster={data.images[0]}
+            >
+              <source src={data.video_url} type="video/mp4" />
+              Ваш браузер не поддерживает видео.
+            </video>
+          </div>
+        )}
+
+        {/* Description */}
+        {data.description && (
+          <div className="card p-6 space-y-4">
+            <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
+              <span>📝</span>
+              <span>Описание товара</span>
+            </h3>
+            <div 
+              className="prose prose-sm max-w-none text-gray-700"
+              dangerouslySetInnerHTML={{ __html: data.description }}
+            />
+          </div>
+        )}
+
+        {/* Properties */}
+        {data.properties && data.properties.length > 0 && (
+          <div className="card p-6 space-y-4">
+            <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
+              <span>📋</span>
+              <span>Характеристики</span>
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {data.properties.map((prop: any, idx: number) => (
+                <div key={idx} className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                  <span className="font-semibold text-gray-700 min-w-[120px]">{prop.name || prop.prop_name}:</span>
+                  <span className="text-gray-600">{prop.value || prop.value_name}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Reviews placeholder */}
+        <div className="card p-6 space-y-4">
+          <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
+            <span>💬</span>
+            <span>Отзывы покупателей</span>
+          </h3>
+          <div className="text-center py-8 text-gray-500">
+            <div className="text-4xl mb-3">🗨️</div>
+            <p className="text-sm">Отзывы будут доступны в следующей версии</p>
           </div>
         </div>
       </div>

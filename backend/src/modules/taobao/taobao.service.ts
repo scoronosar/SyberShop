@@ -172,14 +172,29 @@ export class TaobaoService {
         return this.getMockProductDetails(itemId);
       }
 
-      this.logger.log(`Successfully fetched real Taobao item ${itemId}`);
+      this.logger.log(`✓ Successfully fetched REAL Taobao item ${itemId} with full details`);
+      
+      // Extract images from pic_urls or fallback to main_image_url
+      const images = item.pic_urls || (item.main_image_url ? [item.main_image_url] : ['https://picsum.photos/400/400']);
+      
+      // Calculate total inventory from SKUs
+      const totalInventory = item.sku_list?.reduce((sum: number, sku: any) => sum + (parseInt(sku.quantity) || 0), 0) || item.inventory || 0;
+      
       return {
         id: item.item_id?.toString() || itemId,
         title: item.title || 'Taobao Product',
         price_cny: parseFloat(item.price || item.promotion_price || '0') / 100, // Price in cents
-        images: item.pic_urls || [item.main_image_url] || ['https://picsum.photos/400/400'],
+        images,
         rating: 4.5,
-        sales: item.sku_list?.reduce((sum: number, sku: any) => sum + (sku.quantity || 0), 0) || 0,
+        sales: item.sell_number || totalInventory,
+        inventory: totalInventory,
+        description: item.description || item.desc || '',
+        category: item.category_name || '',
+        brand: item.brand_name || '',
+        shop_name: item.shop_name || item.seller_nick || '',
+        video_url: item.video_url || '',
+        sku_list: item.sku_list || [],
+        properties: item.props_list || item.properties || [],
         mock: false,
       };
     } catch (error) {
