@@ -59,11 +59,9 @@ export class TaobaoService {
         page_no: page.toString(),
         page_size: pageSize.toString(),
         access_token: accessToken,
+        // Keyword is required - use default for popular items if not provided
+        keyword: query || '热销商品', // "hot selling products" in Chinese
       };
-
-      if (query) {
-        params.keyword = query;
-      }
 
       params.sign = this.generateSign(apiPath, params);
 
