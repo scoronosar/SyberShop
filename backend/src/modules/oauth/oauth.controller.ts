@@ -9,11 +9,9 @@ export class OAuthController {
 
   /**
    * Initiate OAuth flow - redirect to TaoWorld authorization page
-   * Admin only
+   * Public endpoint - security handled by TaoWorld OAuth state parameter
    */
   @Get('authorize')
-  @UseGuards(RolesGuard)
-  @Roles('admin')
   @Redirect()
   async authorize(@Query('state') state?: string) {
     const url = this.oauthService.getAuthorizationUrl(state);
