@@ -10,7 +10,17 @@ type Props = {
 export const ProductCard = ({ product }: Props) => {
   const role = useAuthStore((s) => s.role);
   const currency = useSettingsStore((s) => s.currency);
-  const currencySymbol = currency === 'USD' ? '$' : '₽';
+  
+  // Currency symbols mapping
+  const currencySymbols: Record<string, string> = {
+    'RUB': '₽',
+    'USD': '$',
+    'UZS': 'сўм',
+    'TJS': 'ЅМ',
+    'KZT': '₸',
+    'CNY': '¥',
+  };
+  const currencySymbol = currencySymbols[currency] || currency;
   
   return (
     <Link

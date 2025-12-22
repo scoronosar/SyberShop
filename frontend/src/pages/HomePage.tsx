@@ -1,4 +1,4 @@
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { fetchProducts } from '../api/products';
 import { ProductCard } from '../components/ProductCard';
@@ -20,6 +20,7 @@ const CATEGORIES = [
 
 export const HomePage = () => {
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
   const q = searchParams.get('q') ?? '';
   const sort = searchParams.get('sort') ?? '';
   const priceMin = searchParams.get('price_min') ?? '';
@@ -53,14 +54,20 @@ export const HomePage = () => {
       const next = new URLSearchParams(searchParams);
       if (value) next.set(key, value);
       else next.delete(key);
-      window.history.replaceState(null, '', `?${next.toString()}`);
+      navigate(`?${next.toString()}`, { replace: true });
     },
-    [searchParams],
+    [searchParams, navigate],
   );
 
   const handleCategoryClick = (category: typeof CATEGORIES[0]) => {
     setSelectedCategory(category.id);
-    updateParam('q', category.query);
+    const next = new URLSearchParams(searchParams);
+    if (category.query) {
+      next.set('q', category.query);
+    } else {
+      next.delete('q');
+    }
+    navigate(`?${next.toString()}`, { replace: true });
   };
 
   return (
