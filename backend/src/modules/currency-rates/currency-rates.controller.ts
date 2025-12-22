@@ -1,5 +1,6 @@
 import { Controller, Get, Put, Body, Param, UseGuards } from '@nestjs/common';
 import { CurrencyRatesService } from './currency-rates.service';
+import { JwtAuthGuard } from '../auth/jwt.guard';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
 
@@ -20,7 +21,7 @@ export class CurrencyRatesController {
    * Get all rates including inactive (admin only)
    */
   @Get('all')
-  @UseGuards(RolesGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin')
   async getAllAdmin() {
     await this.currencyRatesService.initializeDefaults();
@@ -31,7 +32,7 @@ export class CurrencyRatesController {
    * Update currency rate (admin only)
    */
   @Put(':currency')
-  @UseGuards(RolesGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin')
   async updateRate(
     @Param('currency') currency: string,

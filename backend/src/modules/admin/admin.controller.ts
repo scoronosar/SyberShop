@@ -1,6 +1,7 @@
 import { Body, Controller, Get, Post, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/jwt.guard';
+import { RolesGuard } from '../auth/roles.guard';
 import { PrismaService } from '../../prisma/prisma.service';
 import { Roles } from '../auth/roles.decorator';
 import { AuthService } from '../auth/auth.service';
@@ -8,7 +9,7 @@ import { CreateAdminDto } from './dto/create-admin.dto';
 
 @ApiTags('admin')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, RolesGuard)
 @Roles('admin')
 @Controller('admin')
 export class AdminController {
