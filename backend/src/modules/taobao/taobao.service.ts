@@ -111,25 +111,23 @@ export class TaobaoService {
         return Number.isFinite(n) ? n : 0;
       };
       
-      return items.map((item: any) => ({
-        id: item.item_id?.toString() || `tw-${Date.now()}-${Math.random()}`,
-        title: item.title || 'Taobao Product',
-        // Try to use the cheapest/lowest price if present in search response.
-        // Field names vary by marketplace / api versions.
-        price_cny:
-          (toFen(
-            item.min_price ??
-              item.price_min ??
-              item.lowest_price ??
-              item.final_promotion_price ??
-              item.promotion_price ??
-              item.price,
-          ) || toFen(item.price)) / 100,
-        images: [item.main_image_url || 'https://picsum.photos/400/400'],
-        rating: 4.5,
-        sales: item.inventory || 0,
-        mock: false,
-      }));
+      return items.map((item: any) => {
+        // Use coupon_price if available (most accurate), otherwise use price
+        // Note: Search API doesn't return sku_list, so we use coupon_price as best approximation
+        // The actual cheapest SKU price will be calculated in getProductDetails
+        const priceYuan = toFen(item.coupon_price || item.price || '0');
+        
+        return {
+          id: item.item_id?.toString() || `tw-${Date.now()}-${Math.random()}`,
+          title: item.title || 'Taobao Product',
+          price_cny: priceYuan,
+          images: [item.main_image_url || 'https://picsum.photos/400/400'],
+          rating: 4.5,
+          sales: item.inventory || 0,
+          coupon_price_cny: item.coupon_price ? toFen(item.coupon_price) : null,
+          mock: false,
+        };
+      });
     } catch (error) {
       this.logger.error(`Failed to fetch from TaoWorld Traffic API: ${error.message}`, error.stack);
       return this.getMockProducts(query);
@@ -208,23 +206,21 @@ export class TaobaoService {
       return Number.isFinite(n) ? n : 0;
     };
     
-    return limited.map((item: any) => ({
-      id: item.item_id?.toString() || `tw-${Date.now()}-${Math.random()}`,
-      title: item.title || 'Taobao Product',
-      price_cny:
-        (toFen(
-          item.min_price ??
-            item.price_min ??
-            item.lowest_price ??
-            item.final_promotion_price ??
-            item.promotion_price ??
-            item.price,
-        ) || toFen(item.price)) / 100,
-      images: [item.main_image_url || 'https://picsum.photos/400/400'],
-      rating: 4.5,
-      sales: item.inventory || 0,
-      mock: false,
-    }));
+    return limited.map((item: any) => {
+      // Use coupon_price if available (most accurate), otherwise use price
+      const priceYuan = toFen(item.coupon_price || item.price || '0');
+      
+      return {
+        id: item.item_id?.toString() || `tw-${Date.now()}-${Math.random()}`,
+        title: item.title || 'Taobao Product',
+        price_cny: priceYuan,
+        images: [item.main_image_url || 'https://picsum.photos/400/400'],
+        rating: 4.5,
+        sales: item.inventory || 0,
+        coupon_price_cny: item.coupon_price ? toFen(item.coupon_price) : null,
+        mock: false,
+      };
+    });
   }
 
   private shuffleArray<T>(array: T[]): T[] {

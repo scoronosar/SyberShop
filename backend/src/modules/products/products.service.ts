@@ -44,29 +44,36 @@ export class ProductsService {
     const pageSize = 20;
     let items = await this.taobao.searchProducts(params.query || '', page, pageSize);
 
+    // Note: Getting accurate prices from product details for each item would be too slow
+    // Instead, we use coupon_price from search API which is already the best available price
+    // The product page will show the exact minimum SKU price when user clicks on the item
+    // This is a reasonable trade-off between accuracy and performance
+
+    let filteredItems = itemsWithAccuratePrices;
+
     if (params.priceMin) {
       const min = Number(params.priceMin);
-      if (!Number.isNaN(min)) items = items.filter((p) => p.price_cny >= min);
+      if (!Number.isNaN(min)) filteredItems = filteredItems.filter((p) => p.price_cny >= min);
     }
     if (params.priceMax) {
       const max = Number(params.priceMax);
-      if (!Number.isNaN(max)) items = items.filter((p) => p.price_cny <= max);
+      if (!Number.isNaN(max)) filteredItems = filteredItems.filter((p) => p.price_cny <= max);
     }
     if (params.availability === 'in_stock') {
       // Оставить фильтр для будущего расширения
     }
 
     if (params.sort === 'price_asc') {
-      items = items.sort((a, b) => a.price_cny - b.price_cny);
+      filteredItems = filteredItems.sort((a, b) => a.price_cny - b.price_cny);
     } else if (params.sort === 'price_desc') {
-      items = items.sort((a, b) => b.price_cny - a.price_cny);
+      filteredItems = filteredItems.sort((a, b) => b.price_cny - a.price_cny);
     } else if (params.sort === 'rating_desc') {
-      items = items.sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0));
+      filteredItems = filteredItems.sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0));
     } else if (params.sort === 'sales_desc') {
-      items = items.sort((a, b) => (b.sales ?? 0) - (a.sales ?? 0));
+      filteredItems = filteredItems.sort((a, b) => (b.sales ?? 0) - (a.sales ?? 0));
     }
 
-    return Promise.all(items.map((p) => this.enrichProduct(p, params.currency)));
+    return Promise.all(filteredItems.map((p) => this.enrichProduct(p, params.currency)));
   }
 
   async findOne(id: string, currency?: string) {
