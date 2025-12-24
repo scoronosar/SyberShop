@@ -65,7 +65,12 @@ export class ProductsService {
           const details = await this.taobao.getProductDetails(item.id, apiLanguage);
           if (details && details.price_cny < item.price_cny) {
             // Use the cheaper price from details (cheapest SKU)
-            return { ...item, price_cny: details.price_cny, title: details.title, multi_language_info: details.multi_language_info };
+            return { 
+              ...item, 
+              price_cny: details.price_cny, 
+              title: details.title,
+              multi_language_info: (details as any).multi_language_info || (item as any).multi_language_info || null
+            };
           }
           return item;
         } catch (error) {
