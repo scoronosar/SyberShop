@@ -5,6 +5,7 @@ import { ProductCard } from '../components/ProductCard';
 import { useCallback, useState, useEffect, useRef } from 'react';
 import { useSettingsStore } from '../state/settings';
 import { motion } from 'framer-motion';
+import { useTranslation } from 'react-i18next';
 
 const CATEGORIES = [
   { id: 'all', name: 'Все товары', icon: '🏪', query: '' },
@@ -19,6 +20,7 @@ const CATEGORIES = [
 ];
 
 export const HomePage = () => {
+  const { t } = useTranslation();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const q = searchParams.get('q') ?? '';
@@ -51,8 +53,12 @@ export const HomePage = () => {
         page: pageParam,
       }),
     getNextPageParam: (lastPage, allPages) => {
-      // If last page has items, there might be more
-      if (lastPage && lastPage.length > 0) {
+      // If last page has items (and is not too small), assume there might be more
+      if (lastPage && lastPage.length >= 10) {
+        return allPages.length + 1;
+      }
+      // Always allow at least 5 pages for recommendations
+      if (allPages.length < 5 && !q) {
         return allPages.length + 1;
       }
       return undefined;
@@ -409,7 +415,7 @@ export const HomePage = () => {
           <div className="flex items-center justify-center gap-3 text-gray-600 font-semibold">
             <div className="w-6 h-6 rounded-full bg-gradient-to-r from-primary-500 to-amber-500 animate-spin" 
                  style={{ clipPath: 'polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%, 40% 50%, 50% 60%, 60% 50%)' }} />
-            <span>Загрузка товаров...</span>
+            <span>{t('common.loading')}</span>
           </div>
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
           {Array.from({ length: 10 }).map((_, i) => (
@@ -433,7 +439,7 @@ export const HomePage = () => {
         <div className="space-y-4">
           <div className="flex items-center justify-between px-2">
             <div className="text-sm font-semibold text-gray-700">
-              Найдено товаров: <span className="text-primary-600 text-lg">{allProducts.length}</span>
+              {t('home.found')}: <span className="text-primary-600 text-lg">{allProducts.length}</span>
             </div>
             {!q && (
               <button
@@ -441,7 +447,7 @@ export const HomePage = () => {
                 className="px-4 py-2 rounded-xl bg-gradient-to-r from-primary-500 to-primary-600 text-white font-bold text-sm hover:from-primary-600 hover:to-primary-700 shadow-lg hover:shadow-xl transition-all hover:scale-105 flex items-center gap-2"
               >
                 <span className="text-lg">🔄</span>
-                <span>Обновить</span>
+                <span>{t('common.refresh')}</span>
               </button>
             )}
           </div>
@@ -473,7 +479,7 @@ export const HomePage = () => {
                 <div className="flex items-center gap-3 text-gray-600 font-semibold">
                   <div className="w-6 h-6 rounded-full bg-gradient-to-r from-primary-500 to-amber-500 animate-spin" 
                        style={{ clipPath: 'polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%, 40% 50%, 50% 60%, 60% 50%)' }} />
-                  <span>Загружаем ещё...</span>
+                  <span>{t('common.loading_more')}</span>
                 </div>
               ) : (
                 <button
@@ -481,7 +487,7 @@ export const HomePage = () => {
                   className="px-6 py-3 rounded-xl bg-gradient-to-r from-primary-500 to-primary-600 text-white font-bold hover:from-primary-600 hover:to-primary-700 shadow-lg hover:shadow-xl transition-all hover:scale-105 flex items-center gap-2"
                 >
                   <span>📦</span>
-                  <span>Показать ещё</span>
+                  <span>{t('common.show_more')}</span>
                 </button>
               )}
             </div>
@@ -505,11 +511,11 @@ export const HomePage = () => {
               </div>
             </div>
             <div className="space-y-2">
-              <h3 className="text-2xl font-extrabold text-gray-900">Товары не найдены</h3>
+              <h3 className="text-2xl font-extrabold text-gray-900">{t('home.no_products')}</h3>
               <p className="text-base text-gray-600">
-                К сожалению, по вашему запросу ничего не найдено
-          </p>
-        </div>
+                {t('home.try_different')}
+              </p>
+            </div>
             <div className="space-y-3 pt-4">
               <p className="text-sm font-semibold text-gray-700">Попробуйте:</p>
               <div className="flex flex-wrap justify-center gap-2">

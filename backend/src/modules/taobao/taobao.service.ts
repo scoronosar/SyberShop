@@ -49,7 +49,16 @@ export class TaobaoService {
     try {
       // If no query, show mixed recommendations from multiple categories
       if (!query) {
-        return this.getMixedRecommendations(page, pageSize, accessToken);
+        try {
+          const mixed = await this.getMixedRecommendations(page, pageSize, accessToken);
+          if (mixed && mixed.length > 0) {
+            return mixed;
+          }
+          this.logger.warn('getMixedRecommendations returned empty, falling back to single keyword');
+        } catch (mixErr) {
+          this.logger.error(`getMixedRecommendations failed: ${mixErr.message}`, mixErr.stack);
+        }
+        // Fallback to single keyword search if mix fails
       }
 
       // TaoWorld Traffic API - /traffic/item/search (requires access_token)
@@ -136,15 +145,25 @@ export class TaobaoService {
     const timestamp = Date.now().toString();
     const apiPath = '/traffic/item/search';
     
-    // Select 2-3 random keywords for diversity
-    const selectedKeywords = this.shuffleArray([...keywords]).slice(0, 3);
+    // For pagination: rotate through keywords based on page
+    const numKeywords = 3;
+    const keywordOffset = (page - 1) * numKeywords;
+    const selectedKeywords = keywords.slice(keywordOffset % keywords.length, (keywordOffset + numKeywords) % keywords.length);
+    
+    // If we went past the end, wrap around
+    if (selectedKeywords.length < numKeywords) {
+      selectedKeywords.push(...keywords.slice(0, numKeywords - selectedKeywords.length));
+    }
+    
     const itemsPerKeyword = Math.ceil(pageSize / selectedKeywords.length);
     
-    const promises = selectedKeywords.map(async (keyword) => {
+    this.logger.log(`Fetching mixed recs (page ${page}): keywords=[${selectedKeywords.join(', ')}]`);
+    
+    const promises = selectedKeywords.map(async (keyword, idx) => {
       try {
         const params: Record<string, any> = {
           app_key: this.appKey,
-          timestamp: (Number(timestamp) + Math.random() * 1000).toString(), // Unique timestamp per request
+          timestamp: (Number(timestamp) + idx * 100).toString(), // Unique timestamp per request
           sign_method: 'sha256',
           page_no: '1',
           page_size: itemsPerKeyword.toString(),
@@ -159,7 +178,9 @@ export class TaobaoService {
           this.http.get(`${this.apiUrl}${apiPath}`, { params, timeout: 8000 }),
         );
 
-        return response.data?.data?.data || [];
+        const items = response.data?.data?.data || [];
+        this.logger.log(`  - Keyword "${keyword}": ${items.length} items`);
+        return items;
       } catch (err) {
         this.logger.warn(`Failed to fetch for keyword "${keyword}": ${err.message}`);
         return [];
@@ -168,6 +189,11 @@ export class TaobaoService {
 
     const results = await Promise.all(promises);
     const allItems = results.flat();
+    
+    if (allItems.length === 0) {
+      this.logger.warn('getMixedRecommendations: no items from any keyword, returning empty');
+      return [];
+    }
     
     // Shuffle to mix categories
     const shuffled = this.shuffleArray(allItems);
