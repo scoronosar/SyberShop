@@ -26,5 +26,16 @@ export class AuthController {
   me(@Req() req: any) {
     return this.auth.me(req.user.sub);
   }
+
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @Get('debug')
+  debug(@Req() req: any) {
+    return {
+      user: req.user,
+      role: req.user?.role,
+      roleType: typeof req.user?.role,
+    };
+  }
 }
 
