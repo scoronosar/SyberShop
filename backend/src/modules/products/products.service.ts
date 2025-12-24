@@ -75,7 +75,7 @@ export class ProductsService {
     return this.enrichProduct(item, currency);
   }
 
-  private async enrichProduct(item: ProductData, currency?: string) {
+  async enrichProduct(item: ProductData, currency?: string) {
     // persist minimal product snapshot for cart/order relations
     await this.prisma.product.upsert({
       where: { externalId: item.id },
