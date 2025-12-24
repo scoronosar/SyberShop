@@ -28,10 +28,11 @@ export const HomePage = () => {
   const availability = searchParams.get('availability') ?? '';
   const currency = useSettingsStore((s) => s.currency);
   const [selectedCategory, setSelectedCategory] = useState('all');
+  const [refreshKey, setRefreshKey] = useState(0);
   const queryClient = useQueryClient();
   
   const { data, isLoading } = useQuery({
-    queryKey: ['products', q, sort, priceMin, priceMax, availability, currency],
+    queryKey: ['products', q, sort, priceMin, priceMax, availability, currency, refreshKey],
     queryFn: () =>
       fetchProducts({
         query: q,
@@ -42,6 +43,11 @@ export const HomePage = () => {
         currency,
       }),
   });
+
+  const refreshRecommendations = () => {
+    setRefreshKey(prev => prev + 1);
+    queryClient.invalidateQueries({ queryKey: ['products'] });
+  };
 
   // Invalidate product queries when currency changes
   useEffect(() => {
@@ -192,7 +198,7 @@ export const HomePage = () => {
           <h2 className="text-2xl font-extrabold text-gray-900 flex items-center gap-3">
             <span className="text-3xl">🏷️</span>
             <span>Популярные категории</span>
-          </h2>
+        </h2>
           <div className="hidden sm:flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-primary-100 to-amber-100 border border-primary-200">
             <span className="text-sm font-semibold text-primary-700">
               {data?.length || 0} товаров
@@ -256,8 +262,8 @@ export const HomePage = () => {
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center shadow-lg">
               <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
-              </svg>
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+            </svg>
             </div>
             <span>Фильтры и сортировка</span>
           </div>
@@ -297,25 +303,25 @@ export const HomePage = () => {
             </label>
             <div className="flex gap-3">
               <div className="flex-1">
-                <input
+              <input
                   className="input-field text-sm font-medium bg-white border-2 border-gray-200 focus:border-primary-400 focus:ring-4 focus:ring-primary-100"
                   placeholder="Мин."
-                  value={priceMin}
-                  onChange={(e) => updateParam('price_min', e.target.value)}
-                  inputMode="numeric"
-                />
+                value={priceMin}
+                onChange={(e) => updateParam('price_min', e.target.value)}
+                inputMode="numeric"
+              />
               </div>
               <div className="flex items-center text-gray-400 font-bold">—</div>
               <div className="flex-1">
-                <input
+              <input
                   className="input-field text-sm font-medium bg-white border-2 border-gray-200 focus:border-primary-400 focus:ring-4 focus:ring-primary-100"
                   placeholder="Макс."
-                  value={priceMax}
-                  onChange={(e) => updateParam('price_max', e.target.value)}
-                  inputMode="numeric"
-                />
-              </div>
+                value={priceMax}
+                onChange={(e) => updateParam('price_max', e.target.value)}
+                inputMode="numeric"
+              />
             </div>
+          </div>
           </div>
           
           <div className="space-y-3">
@@ -369,10 +375,10 @@ export const HomePage = () => {
                  style={{ clipPath: 'polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%, 40% 50%, 50% 60%, 60% 50%)' }} />
             <span>Загрузка товаров...</span>
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-            {Array.from({ length: 10 }).map((_, i) => (
-              <div
-                key={i}
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+          {Array.from({ length: 10 }).map((_, i) => (
+            <div
+              key={i}
                 className="h-72 rounded-2xl border-2 border-gray-200 bg-gradient-to-br from-gray-100 via-gray-50 to-white animate-pulse shadow-md"
               >
                 <div className="h-48 bg-gray-200 rounded-t-2xl" />
@@ -393,27 +399,36 @@ export const HomePage = () => {
             <div className="text-sm font-semibold text-gray-700">
               Найдено товаров: <span className="text-primary-600 text-lg">{data.length}</span>
             </div>
+            {!q && (
+              <button
+                onClick={refreshRecommendations}
+                className="px-4 py-2 rounded-xl bg-gradient-to-r from-primary-500 to-primary-600 text-white font-bold text-sm hover:from-primary-600 hover:to-primary-700 shadow-lg hover:shadow-xl transition-all hover:scale-105 flex items-center gap-2"
+              >
+                <span className="text-lg">🔄</span>
+                <span>Обновить</span>
+              </button>
+            )}
           </div>
           
-          <motion.div 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.5 }}
-            className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4"
-          >
-            {data.map((p, idx) => (
-              <motion.div
-                key={p.id}
-                initial={{ opacity: 0, translateY: 20 }}
-                animate={{ opacity: 1, translateY: 0 }}
+        <motion.div 
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.5 }}
+          className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4"
+        >
+          {data.map((p, idx) => (
+            <motion.div
+              key={p.id}
+              initial={{ opacity: 0, translateY: 20 }}
+              animate={{ opacity: 1, translateY: 0 }}
                 transition={{ duration: 0.3, delay: Math.min(idx * 0.04, 1) }}
                 whileHover={{ scale: 1.03 }}
                 className="transform-gpu"
-              >
-                <ProductCard product={p} />
-              </motion.div>
-            ))}
-          </motion.div>
+            >
+              <ProductCard product={p} />
+            </motion.div>
+          ))}
+        </motion.div>
         </div>
       )}
 
@@ -436,8 +451,8 @@ export const HomePage = () => {
               <h3 className="text-2xl font-extrabold text-gray-900">Товары не найдены</h3>
               <p className="text-base text-gray-600">
                 К сожалению, по вашему запросу ничего не найдено
-              </p>
-            </div>
+          </p>
+        </div>
             <div className="space-y-3 pt-4">
               <p className="text-sm font-semibold text-gray-700">Попробуйте:</p>
               <div className="flex flex-wrap justify-center gap-2">

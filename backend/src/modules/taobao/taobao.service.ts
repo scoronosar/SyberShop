@@ -47,14 +47,15 @@ export class TaobaoService {
     }
 
     try {
+      // If no query, show mixed recommendations from multiple categories
+      if (!query) {
+        return this.getMixedRecommendations(page, pageSize, accessToken);
+      }
+
       // TaoWorld Traffic API - /traffic/item/search (requires access_token)
       // Docs: https://open.taobao.global/doc/api.htm#/api?path=/traffic/item/search
       const timestamp = Date.now().toString();
       const apiPath = '/traffic/item/search';
-      
-      // If no query, use recommended keywords for diverse products
-      const recommendedKeyword = this.getRecommendedKeyword(page);
-      const searchKeyword = query || recommendedKeyword;
       
       const params: Record<string, any> = {
         app_key: this.appKey,
@@ -63,12 +64,13 @@ export class TaobaoService {
         page_no: page.toString(),
         page_size: pageSize.toString(),
         access_token: accessToken,
-        keyword: searchKeyword,
+        keyword: query,
+        sort: 'SALE_QTY_DESC', // Sort by sales for better recommendations
       };
 
       params.sign = this.generateSign(apiPath, params);
 
-      this.logger.log(`Calling TaoWorld Traffic Search API: ${apiPath} keyword="${searchKeyword}" (user query: "${query || 'none'}")`);
+      this.logger.log(`Calling TaoWorld Traffic Search API: ${apiPath} keyword="${query}"`);
       const response = await firstValueFrom(
         this.http.get(`${this.apiUrl}${apiPath}`, { params, timeout: 10000 }),
       );
@@ -86,7 +88,7 @@ export class TaobaoService {
       }
 
       this.logger.log(`✓ TaoWorld API returned ${items.length} REAL products!`);
-
+      
       const toFen = (v: any): number => {
         if (v === null || v === undefined) return 0;
         const s = String(v).trim();
@@ -126,27 +128,125 @@ export class TaobaoService {
   }
 
   /**
-   * Get recommended keyword for main page based on popular categories
-   * Returns different keywords to show diverse products
+   * Get mixed recommendations from multiple categories for main page
+   * Shows diverse products from different categories
    */
-  private getRecommendedKeyword(page: number): string {
-    const recommendedKeywords = [
-      '数码产品',    // Digital products / Electronics
-      '时尚女装',    // Fashion women's clothing
-      '运动户外',    // Sports & Outdoors
-      '家居用品',    // Home goods
-      '美妆护肤',    // Beauty & Skincare
+  private async getMixedRecommendations(page: number, pageSize: number, accessToken: string) {
+    const keywords = this.getRecommendationKeywords();
+    const timestamp = Date.now().toString();
+    const apiPath = '/traffic/item/search';
+    
+    // Select 2-3 random keywords for diversity
+    const selectedKeywords = this.shuffleArray([...keywords]).slice(0, 3);
+    const itemsPerKeyword = Math.ceil(pageSize / selectedKeywords.length);
+    
+    const promises = selectedKeywords.map(async (keyword) => {
+      try {
+        const params: Record<string, any> = {
+          app_key: this.appKey,
+          timestamp: (Number(timestamp) + Math.random() * 1000).toString(), // Unique timestamp per request
+          sign_method: 'sha256',
+          page_no: '1',
+          page_size: itemsPerKeyword.toString(),
+          access_token: accessToken,
+          keyword,
+          sort: 'SALE_QTY_DESC',
+        };
+
+        params.sign = this.generateSign(apiPath, params);
+
+        const response = await firstValueFrom(
+          this.http.get(`${this.apiUrl}${apiPath}`, { params, timeout: 8000 }),
+        );
+
+        return response.data?.data?.data || [];
+      } catch (err) {
+        this.logger.warn(`Failed to fetch for keyword "${keyword}": ${err.message}`);
+        return [];
+      }
+    });
+
+    const results = await Promise.all(promises);
+    const allItems = results.flat();
+    
+    // Shuffle to mix categories
+    const shuffled = this.shuffleArray(allItems);
+    const limited = shuffled.slice(0, pageSize);
+    
+    this.logger.log(`✓ Mixed recommendations: ${limited.length} items from ${selectedKeywords.length} categories`);
+    
+    const toFen = (val: any) => {
+      if (val == null) return 0;
+      const str = val.toString();
+      const n = Number.parseFloat(str);
+      return Number.isFinite(n) ? n : 0;
+    };
+    
+    return limited.map((item: any) => ({
+      id: item.item_id?.toString() || `tw-${Date.now()}-${Math.random()}`,
+      title: item.title || 'Taobao Product',
+      price_cny:
+        (toFen(
+          item.min_price ??
+            item.price_min ??
+            item.lowest_price ??
+            item.final_promotion_price ??
+            item.promotion_price ??
+            item.price,
+        ) || toFen(item.price)) / 100,
+      images: [item.main_image_url || 'https://picsum.photos/400/400'],
+      rating: 4.5,
+      sales: item.inventory || 0,
+      mock: false,
+    }));
+  }
+
+  private shuffleArray<T>(array: T[]): T[] {
+    const shuffled = [...array];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    return shuffled;
+  }
+
+  private getRecommendationKeywords(): string[] {
+    return [
+      // Trending & Popular
+      '爆款热销',    // Best sellers
+      '新品上市',    // New arrivals
+      '人气推荐',    // Popular recommendations
+      
+      // Electronics & Digital
+      '数码产品',    // Digital products
       '手机配件',    // Phone accessories
-      '潮流男装',    // Trendy men's clothing
+      '电脑办公',    // Computer & Office
+      '智能设备',    // Smart devices
+      
+      // Fashion
+      '时尚女装',    // Women's fashion
+      '潮流男装',    // Men's fashion
+      '运动服饰',    // Sportswear
+      
+      // Home & Living
+      '家居用品',    // Home goods
+      '厨房用品',    // Kitchen supplies
+      '家居装饰',    // Home decor
+      
+      // Beauty & Health
+      '美妆护肤',    // Beauty & Skincare
+      '个护健康',    // Personal care
+      
+      // Accessories & More
       '包包饰品',    // Bags & Accessories
       '创意礼品',    // Creative gifts
-      '热销爆款',    // Hot selling items
+      '运动户外',    // Sports & Outdoors
+      '母婴用品',    // Baby products
+      '食品零食',    // Snacks
+      '宠物用品',    // Pet supplies
     ];
-    
-    // Rotate keywords based on page number for diversity
-    const index = (page - 1) % recommendedKeywords.length;
-    return recommendedKeywords[index];
   }
+
 
   async getProductDetails(itemId: string) {
     if (this.mode === 'MOCK' || itemId.startsWith('mock-')) {
