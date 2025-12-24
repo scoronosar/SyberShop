@@ -1,17 +1,17 @@
 import { create } from 'zustand';
 
 export type SupportedCurrency = 'RUB' | 'USD' | 'UZS' | 'TJS' | 'KZT' | 'CNY';
+export type SupportedLanguage = 'ru' | 'en' | 'tg' | 'kk' | 'uz' | 'fa' | 'ky';
 
 type SettingsState = {
-  language: 'ru' | 'en';
+  language: SupportedLanguage;
   currency: SupportedCurrency;
-  setLanguage: (lang: 'ru' | 'en') => void;
+  setLanguage: (lang: SupportedLanguage) => void;
   setCurrency: (cur: SupportedCurrency) => void;
 };
 
 const storedLanguage = (typeof window !== 'undefined' && localStorage.getItem('sybershop_lang')) as
-  | 'ru'
-  | 'en'
+  | SupportedLanguage
   | null;
 const storedCurrency = (typeof window !== 'undefined' && localStorage.getItem('sybershop_cur')) as
   | SupportedCurrency

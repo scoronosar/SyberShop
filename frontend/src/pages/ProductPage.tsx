@@ -7,10 +7,12 @@ import toast from 'react-hot-toast';
 import { useAuthStore } from '../state/auth';
 import { useSettingsStore } from '../state/settings';
 import { Modal } from '../components/Modal';
+import { useTranslation } from 'react-i18next';
 
 export const ProductPage = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { t, i18n } = useTranslation();
   const [qty, setQty] = useState(1);
   const [selectedImage, setSelectedImage] = useState(0);
   const [selectedSku, setSelectedSku] = useState<any>(null);
@@ -172,6 +174,43 @@ export const ProductPage = () => {
     return cny * pricingMultiplier;
   };
 
+  const localizePropName = (name: string) => {
+    const n = (name || '').trim();
+    const lng = i18n.language;
+    const dict: Record<string, Record<string, string>> = {
+      '颜色分类': { ru: 'Цвет', en: 'Color', tg: 'Ранг', kk: 'Түс', uz: 'Rang', fa: 'رنگ', ky: 'Түс' },
+      '颜色': { ru: 'Цвет', en: 'Color', tg: 'Ранг', kk: 'Түс', uz: 'Rang', fa: 'رنگ', ky: 'Түс' },
+      '尺寸': { ru: 'Размер', en: 'Size', tg: 'Андоза', kk: 'Өлшем', uz: "O'lcham", fa: 'اندازه', ky: 'Өлчөм' },
+      '尺码': { ru: 'Размер', en: 'Size', tg: 'Андоза', kk: 'Өлшем', uz: "O'lcham", fa: 'اندازه', ky: 'Өлчөм' },
+    };
+    return dict[n]?.[lng] || dict[n]?.en || n;
+  };
+
+  // Preselect cheapest SKU (so product page shows the minimum variant price and modal opens with selection)
+  useEffect(() => {
+    if (!data) return;
+    if (!skuList.length) return;
+    if (selectedSku || Object.keys(selectedOptions).length) return;
+
+    const cheapest = [...skuList].sort((a, b) => getSkuPriceCny(a) - getSkuPriceCny(b))[0];
+    if (!cheapest) return;
+    setSelectedSku(cheapest);
+
+    const nextOptions: Record<string, string> = {};
+    (cheapest.properties ?? []).forEach((p: any) => {
+      const propName = p.prop_name || p.name || 'Опция';
+      const propValue = p.value_name || p.value || '';
+      if (propName && propValue) nextOptions[propName] = propValue;
+    });
+    setSelectedOptions(nextOptions);
+
+    const skuImg = cheapest.pic_url || cheapest.images?.[0];
+    if (skuImg && data.images?.length) {
+      const idx = data.images.indexOf(skuImg);
+      if (idx >= 0) setSelectedImage(idx);
+    }
+  }, [data, skuList, selectedOptions, selectedSku]);
+
   const buildSkuPayloadString = (sku: any) => {
     const mpSkuId = (sku?.mp_sku_id ?? sku?.mp_skuId ?? sku?.mp_skuID ?? '').toString();
     const skuId = (sku?.sku_id ?? '').toString();
@@ -315,11 +354,11 @@ export const ProductPage = () => {
         <div className="card p-6 space-y-4 bg-gradient-to-br from-white to-orange-50/30">
           <div className="flex items-baseline justify-between">
             <div className="text-4xl font-extrabold bg-gradient-to-r from-primary-600 to-primary-500 bg-clip-text text-transparent">
-              {data.final_item_price.toFixed(2)} {currencySymbol}
+              {(selectedSku ? getSkuFinalPrice(selectedSku) : data.final_item_price).toFixed(2)} {currencySymbol}
             </div>
             {role === 'admin' && (
               <span className="text-base text-gray-500 font-semibold">
-                ({data.price_cny} ¥)
+                ({(selectedSku ? getSkuPriceCny(selectedSku) : data.price_cny).toFixed(2)} ¥)
               </span>
             )}
           </div>
@@ -395,19 +434,19 @@ export const ProductPage = () => {
                   </div>
                 </div>
               </div>
-              <button
+                <button
                 onClick={() => setShowSkuModal(true)}
                 className="px-4 py-2 rounded-xl bg-primary-500 hover:bg-primary-600 text-white font-bold text-sm transition-all hover:scale-105 shadow-md"
               >
                 Выбрать →
-              </button>
+                </button>
             </div>
           </div>
         )}
 
         {/* Add to Cart Section */}
         <div className="card p-6 space-y-4 bg-gradient-to-br from-white to-primary-50/20">
-          <button
+              <button
             onClick={handleAddToCartClick}
             disabled={addMutation.isPending}
             className="w-full btn-primary text-lg font-bold py-4 shadow-xl hover:shadow-2xl hover:scale-105 transition-all duration-300 flex items-center justify-center gap-3"
@@ -426,7 +465,7 @@ export const ProductPage = () => {
                 )}
               </>
             )}
-          </button>
+              </button>
           
           <div className="grid grid-cols-2 gap-3">
             <div className="flex items-center gap-2 text-xs text-gray-600 bg-blue-50 border border-blue-200 rounded-lg p-3">
@@ -734,18 +773,18 @@ export const ProductPage = () => {
                   <div key={propName} className="space-y-3">
                     <label className="text-base font-bold text-gray-900 flex items-center gap-2">
                       <span className="text-xl">{isColorProperty ? '🎨' : '📏'}</span>
-                      <span>{propName}:</span>
+                      <span>{localizePropName(propName)}:</span>
                       {selectedOptions[propName] && (
                         <span className="text-primary-600">
                           {selectedOptions[propName]}
                         </span>
                       )}
                       {!selectedOptions[propName] && (
-                        <span className="text-red-500 text-sm font-normal">* Выберите вариант</span>
+                        <span className="text-red-500 text-sm font-normal">* {t('product.select_variant', 'Выберите вариант')}</span>
                       )}
                     </label>
                     
-                    <div className={`grid gap-3 ${hasImages && isColorProperty ? 'grid-cols-5 sm:grid-cols-6' : 'grid-cols-3 sm:grid-cols-5'}`}>
+                    <div className={`grid gap-3 ${hasImages && isColorProperty ? 'grid-cols-4 sm:grid-cols-6' : 'grid-cols-2 sm:grid-cols-5'}`}>
                       {Array.from(values).map((value) => {
                         const detail = details.get(value);
                         const isSelected = selectedOptions[propName] === value;
@@ -785,7 +824,7 @@ export const ProductPage = () => {
                             {!detail?.available && (
                               <div className="absolute inset-0 flex items-center justify-center bg-white/90 rounded-xl">
                                 <span className="text-xs font-bold text-red-600 bg-white px-2 py-1 rounded-md shadow-sm">
-                                  Нет в наличии
+                                  {t('product.out_of_stock', 'Нет в наличии')}
                                 </span>
                               </div>
                             )}
@@ -806,7 +845,7 @@ export const ProductPage = () => {
                 <div className="space-y-3 pt-4 border-t-2 border-gray-200">
                   <label className="text-base font-bold text-gray-900 flex items-center gap-2">
                     <span className="text-xl">🔢</span>
-                    <span>Количество:</span>
+                    <span>{t('product.quantity', 'Количество')}:</span>
                   </label>
                   <div className="flex items-center gap-3">
                     <div className="flex items-center border-2 border-gray-300 rounded-xl overflow-hidden shadow-sm">
@@ -839,19 +878,19 @@ export const ProductPage = () => {
                 </div>
 
                 {/* Confirm Button */}
-                <div className="pt-6 border-t-2 border-gray-200">
+                <div className="pt-6 border-t-2 border-gray-200 sticky bottom-0 bg-white/95 backdrop-blur-sm">
                   {!Array.from(skuOptionGroups.groups.keys()).every((k) => Boolean(selectedOptions[k])) ? (
                     <div className="p-4 bg-amber-50 border-2 border-amber-200 rounded-xl text-center">
-                      <div className="text-amber-700 font-bold mb-1">⚠️ Выберите все варианты</div>
+                      <div className="text-amber-700 font-bold mb-1">⚠️ {t('product.select_all', 'Выберите все варианты')}</div>
                       <div className="text-xs text-amber-600">
-                        Необходимо выбрать все параметры товара перед добавлением в корзину
+                        {t('product.select_all_hint', 'Необходимо выбрать все параметры товара перед добавлением в корзину')}
                       </div>
                     </div>
                   ) : !selectedSku || getSkuQuantity(selectedSku) === 0 ? (
                     <div className="p-4 bg-red-50 border-2 border-red-200 rounded-xl text-center">
-                      <div className="text-red-700 font-bold mb-1">✕ Вариант недоступен</div>
+                      <div className="text-red-700 font-bold mb-1">✕ {t('product.variant_unavailable', 'Вариант недоступен')}</div>
                       <div className="text-xs text-red-600">
-                        Выбранный вариант нет в наличии. Попробуйте выбрать другой.
+                        {t('product.variant_unavailable_hint', 'Выбранный вариант нет в наличии. Попробуйте выбрать другой.')}
                       </div>
                     </div>
                   ) : (
@@ -863,12 +902,12 @@ export const ProductPage = () => {
                       {addMutation.isPending ? (
                         <>
                           <div className="w-5 h-5 border-3 border-white border-t-transparent rounded-full animate-spin" />
-                          <span>Добавляем в корзину...</span>
+                          <span>{t('product.adding', 'Добавляем в корзину...')}</span>
                         </>
                       ) : (
                         <>
                           <span className="text-2xl">✓</span>
-                          <span>Добавить в корзину</span>
+                          <span>{t('product.add_to_cart', 'Добавить в корзину')}</span>
                           <span className="text-sm opacity-90">
                             • {qty} шт. • {(getSkuFinalPrice(selectedSku) * qty).toFixed(2)} {currencySymbol}
                           </span>

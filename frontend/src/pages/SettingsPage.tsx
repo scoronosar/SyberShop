@@ -34,11 +34,16 @@ export const SettingsPage = () => {
             </label>
             <select
               value={language}
-              onChange={(e) => setLanguage(e.target.value as 'ru' | 'en')}
+              onChange={(e) => setLanguage(e.target.value as any)}
               className="input-field bg-white"
             >
               <option value="ru">🇷🇺 Русский</option>
               <option value="en">🇬🇧 English</option>
+              <option value="tg">🇹🇯 Тоҷикӣ</option>
+              <option value="kk">🇰🇿 Қазақша</option>
+              <option value="uz">🇺🇿 O‘zbekcha</option>
+              <option value="fa">🇦🇫 فارسی</option>
+              <option value="ky">🇰🇬 Кыргызча</option>
             </select>
           </div>
 

@@ -86,11 +86,34 @@ export class TaobaoService {
       }
 
       this.logger.log(`✓ TaoWorld API returned ${items.length} REAL products!`);
+
+      const toFen = (v: any): number => {
+        if (v === null || v === undefined) return 0;
+        const s = String(v).trim();
+        if (!s) return 0;
+        // If price looks like decimal in yuan, convert to fen.
+        if (s.includes('.')) {
+          const f = Number.parseFloat(s);
+          return Number.isFinite(f) ? Math.round(f * 100) : 0;
+        }
+        const n = Number.parseInt(s, 10);
+        return Number.isFinite(n) ? n : 0;
+      };
       
       return items.map((item: any) => ({
         id: item.item_id?.toString() || `tw-${Date.now()}-${Math.random()}`,
         title: item.title || 'Taobao Product',
-        price_cny: parseFloat(item.price || '0') / 100, // Price in cents
+        // Try to use the cheapest/lowest price if present in search response.
+        // Field names vary by marketplace / api versions.
+        price_cny:
+          (toFen(
+            item.min_price ??
+              item.price_min ??
+              item.lowest_price ??
+              item.final_promotion_price ??
+              item.promotion_price ??
+              item.price,
+          ) || toFen(item.price)) / 100,
         images: [item.main_image_url || 'https://picsum.photos/400/400'],
         rating: 4.5,
         sales: item.inventory || 0,
@@ -179,11 +202,22 @@ export class TaobaoService {
       
       // Calculate total inventory from SKUs
       const totalInventory = item.sku_list?.reduce((sum: number, sku: any) => sum + (parseInt(sku.quantity) || 0), 0) || item.inventory || 0;
+
+      // Prefer cheapest SKU price (Taobao sku_list prices are in "fen"), fall back to item.price/promotion_price.
+      const skuList: any[] = Array.isArray(item.sku_list) ? item.sku_list : [];
+      const skuMinFen = skuList.reduce((min: number, sku: any) => {
+        const fen =
+          parseInt(sku?.coupon_price ?? sku?.promotion_price ?? sku?.price ?? '0', 10) || 0;
+        if (!fen) return min;
+        return min === 0 ? fen : Math.min(min, fen);
+      }, 0);
+      const itemFen = parseInt(item.price || item.promotion_price || '0', 10) || 0;
+      const baseFen = skuMinFen || itemFen;
       
       return {
         id: item.item_id?.toString() || itemId,
         title: item.title || 'Taobao Product',
-        price_cny: parseFloat(item.price || item.promotion_price || '0') / 100, // Price in cents
+        price_cny: baseFen / 100, // Price in "fen"
         images,
         rating: 4.5,
         sales: item.sell_number || totalInventory,
