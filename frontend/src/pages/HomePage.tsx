@@ -1,8 +1,8 @@
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
 import { fetchProducts } from '../api/products';
 import { ProductCard } from '../components/ProductCard';
-import { useCallback, useState, useEffect } from 'react';
+import { useCallback, useState, useEffect, useRef } from 'react';
 import { useSettingsStore } from '../state/settings';
 import { motion } from 'framer-motion';
 
@@ -30,10 +30,17 @@ export const HomePage = () => {
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [refreshKey, setRefreshKey] = useState(0);
   const queryClient = useQueryClient();
+  const loadMoreRef = useRef<HTMLDivElement>(null);
   
-  const { data, isLoading } = useQuery({
+  const {
+    data,
+    isLoading,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useInfiniteQuery({
     queryKey: ['products', q, sort, priceMin, priceMax, availability, currency, refreshKey],
-    queryFn: () =>
+    queryFn: ({ pageParam = 1 }) =>
       fetchProducts({
         query: q,
         sort,
@@ -41,13 +48,42 @@ export const HomePage = () => {
         price_max: priceMax,
         availability,
         currency,
+        page: pageParam,
       }),
+    getNextPageParam: (lastPage, allPages) => {
+      // If last page has items, there might be more
+      if (lastPage && lastPage.length > 0) {
+        return allPages.length + 1;
+      }
+      return undefined;
+    },
+    initialPageParam: 1,
   });
+
+  const allProducts = data?.pages.flat() ?? [];
 
   const refreshRecommendations = () => {
     setRefreshKey(prev => prev + 1);
     queryClient.invalidateQueries({ queryKey: ['products'] });
   };
+
+  // Intersection Observer for infinite scroll
+  useEffect(() => {
+    if (!loadMoreRef.current) return;
+    if (!hasNextPage || isFetchingNextPage) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          fetchNextPage();
+        }
+      },
+      { threshold: 0.1 }
+    );
+
+    observer.observe(loadMoreRef.current);
+    return () => observer.disconnect();
+  }, [fetchNextPage, hasNextPage, isFetchingNextPage]);
 
   // Invalidate product queries when currency changes
   useEffect(() => {
@@ -393,11 +429,11 @@ export const HomePage = () => {
       )}
 
       {/* Products Grid */}
-      {!isLoading && data && data.length > 0 && (
+      {!isLoading && allProducts.length > 0 && (
         <div className="space-y-4">
           <div className="flex items-center justify-between px-2">
             <div className="text-sm font-semibold text-gray-700">
-              Найдено товаров: <span className="text-primary-600 text-lg">{data.length}</span>
+              Найдено товаров: <span className="text-primary-600 text-lg">{allProducts.length}</span>
             </div>
             {!q && (
               <button
@@ -410,30 +446,51 @@ export const HomePage = () => {
             )}
           </div>
           
-        <motion.div 
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.5 }}
-          className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4"
-        >
-          {data.map((p, idx) => (
-            <motion.div
-              key={p.id}
-              initial={{ opacity: 0, translateY: 20 }}
-              animate={{ opacity: 1, translateY: 0 }}
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.5 }}
+            className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4"
+          >
+            {allProducts.map((p, idx) => (
+              <motion.div
+                key={`${p.id}-${idx}`}
+                initial={{ opacity: 0, translateY: 20 }}
+                animate={{ opacity: 1, translateY: 0 }}
                 transition={{ duration: 0.3, delay: Math.min(idx * 0.04, 1) }}
                 whileHover={{ scale: 1.03 }}
                 className="transform-gpu"
-            >
-              <ProductCard product={p} />
-            </motion.div>
-          ))}
-        </motion.div>
+              >
+                <ProductCard product={p} />
+              </motion.div>
+            ))}
+          </motion.div>
+
+          {/* Load More Trigger */}
+          {hasNextPage && (
+            <div ref={loadMoreRef} className="py-8 flex justify-center">
+              {isFetchingNextPage ? (
+                <div className="flex items-center gap-3 text-gray-600 font-semibold">
+                  <div className="w-6 h-6 rounded-full bg-gradient-to-r from-primary-500 to-amber-500 animate-spin" 
+                       style={{ clipPath: 'polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%, 40% 50%, 50% 60%, 60% 50%)' }} />
+                  <span>Загружаем ещё...</span>
+                </div>
+              ) : (
+                <button
+                  onClick={() => fetchNextPage()}
+                  className="px-6 py-3 rounded-xl bg-gradient-to-r from-primary-500 to-primary-600 text-white font-bold hover:from-primary-600 hover:to-primary-700 shadow-lg hover:shadow-xl transition-all hover:scale-105 flex items-center gap-2"
+                >
+                  <span>📦</span>
+                  <span>Показать ещё</span>
+                </button>
+              )}
+            </div>
+          )}
         </div>
       )}
 
       {/* Empty State */}
-      {!isLoading && (!data || data.length === 0) && (
+      {!isLoading && allProducts.length === 0 && (
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}

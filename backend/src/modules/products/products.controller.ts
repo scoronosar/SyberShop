@@ -15,6 +15,7 @@ export class ProductsController {
     @Query('price_max') priceMax?: string,
     @Query('availability') availability?: string,
     @Query('currency') currency?: string,
+    @Query('page') page?: string,
   ) {
     return this.products.search({
       query,
@@ -23,6 +24,7 @@ export class ProductsController {
       priceMax,
       availability,
       currency,
+      page: page ? parseInt(page, 10) : undefined,
     });
   }
 

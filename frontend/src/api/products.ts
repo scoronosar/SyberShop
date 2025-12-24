@@ -28,6 +28,7 @@ type ProductQuery = {
   price_max?: string;
   availability?: string;
   currency?: string;
+  page?: number;
 };
 
 export const fetchProducts = async (params?: ProductQuery) => {
