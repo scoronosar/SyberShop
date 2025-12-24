@@ -16,6 +16,7 @@ export class ProductsController {
     @Query('availability') availability?: string,
     @Query('currency') currency?: string,
     @Query('page') page?: string,
+    @Query('language') language?: string,
   ) {
     return this.products.search({
       query,
@@ -25,12 +26,13 @@ export class ProductsController {
       availability,
       currency,
       page: page ? parseInt(page, 10) : undefined,
+      language,
     });
   }
 
   @Get(':id')
-  async detail(@Param('id') id: string, @Query('currency') currency?: string) {
-    const product = await this.products.findOne(id, currency);
+  async detail(@Param('id') id: string, @Query('currency') currency?: string, @Query('language') language?: string) {
+    const product = await this.products.findOne(id, currency, language);
     return product ?? { message: 'Product not found', mock: true };
   }
 }

@@ -19,6 +19,7 @@ export type Product = {
   video_url?: string;
   sku_list?: any[];
   properties?: any[];
+  multi_language_info?: any;
 };
 
 type ProductQuery = {
@@ -29,6 +30,7 @@ type ProductQuery = {
   availability?: string;
   currency?: string;
   page?: number;
+  language?: string;
 };
 
 export const fetchProducts = async (params?: ProductQuery) => {
@@ -36,8 +38,8 @@ export const fetchProducts = async (params?: ProductQuery) => {
   return res.data;
 };
 
-export const fetchProduct = async (id: string, currency?: string) => {
-  const res = await api.get<Product>(`/products/${id}`, { params: { currency } });
+export const fetchProduct = async (id: string, currency?: string, language?: string) => {
+  const res = await api.get<Product>(`/products/${id}`, { params: { currency, language } });
   return res.data;
 };
 

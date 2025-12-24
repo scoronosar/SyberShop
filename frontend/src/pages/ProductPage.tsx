@@ -39,8 +39,8 @@ export const ProductPage = () => {
   const [isZoomed, setIsZoomed] = useState(false);
 
   const { data, isLoading } = useQuery({
-    queryKey: ['product', id, currency],
-    queryFn: () => fetchProduct(id!, currency),
+    queryKey: ['product', id, currency, language],
+    queryFn: () => fetchProduct(id!, currency, language),
     enabled: !!id,
   });
 

@@ -21,6 +21,7 @@ type ProductData = {
   video_url?: string;
   sku_list?: any[];
   properties?: any[];
+  multi_language_info?: any;
 };
 
 @Injectable()
@@ -39,17 +40,42 @@ export class ProductsService {
     availability?: string;
     currency?: string;
     page?: number;
+    language?: string;
   }) {
     const page = params.page || 1;
     const pageSize = 20;
-    let items = await this.taobao.searchProducts(params.query || '', page, pageSize);
+    
+    // Map frontend language codes to Taobao API language codes
+    const languageMap: Record<string, string> = {
+      'en': 'en',
+      'ru': 'ru',
+      'vi': 'vi',
+      'ko': 'ko',
+      'ja': 'ja',
+    };
+    const apiLanguage = params.language && languageMap[params.language] ? languageMap[params.language] : undefined;
+    
+    let items = await this.taobao.searchProducts(params.query || '', page, pageSize, apiLanguage);
 
-    // Note: Getting accurate prices from product details for each item would be too slow
-    // Instead, we use coupon_price from search API which is already the best available price
-    // The product page will show the exact minimum SKU price when user clicks on the item
-    // This is a reasonable trade-off between accuracy and performance
+    // Get accurate prices from product details for each item (parallel requests)
+    // This ensures we show the cheapest SKU price, matching the main page behavior
+    const itemsWithAccuratePrices = await Promise.all(
+      items.map(async (item) => {
+        try {
+          const details = await this.taobao.getProductDetails(item.id, apiLanguage);
+          if (details && details.price_cny < item.price_cny) {
+            // Use the cheaper price from details (cheapest SKU)
+            return { ...item, price_cny: details.price_cny, title: details.title, multi_language_info: details.multi_language_info };
+          }
+          return item;
+        } catch (error) {
+          // If getting details fails, use the original item
+          return item;
+        }
+      })
+    );
 
-    let filteredItems = items;
+    let filteredItems = itemsWithAccuratePrices;
 
     if (params.priceMin) {
       const min = Number(params.priceMin);
@@ -76,8 +102,18 @@ export class ProductsService {
     return Promise.all(filteredItems.map((p) => this.enrichProduct(p, params.currency)));
   }
 
-  async findOne(id: string, currency?: string) {
-    const item = await this.taobao.getProductDetails(id);
+  async findOne(id: string, currency?: string, language?: string) {
+    // Map frontend language codes to Taobao API language codes
+    const languageMap: Record<string, string> = {
+      'en': 'en',
+      'ru': 'ru',
+      'vi': 'vi',
+      'ko': 'ko',
+      'ja': 'ja',
+    };
+    const apiLanguage = language && languageMap[language] ? languageMap[language] : undefined;
+    
+    const item = await this.taobao.getProductDetails(id, apiLanguage);
     if (!item) return null;
     return this.enrichProduct(item, currency);
   }
@@ -120,6 +156,7 @@ export class ProductsService {
       video_url: item.video_url,
       sku_list: item.sku_list,
       properties: item.properties,
+      multi_language_info: item.multi_language_info,
       rate_used: pricing.rate,
       converted_with_markup: pricing.converted_with_markup,
       service_fee_amount: pricing.service_fee_amount,

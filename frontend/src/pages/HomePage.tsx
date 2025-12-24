@@ -29,6 +29,7 @@ export const HomePage = () => {
   const priceMax = searchParams.get('price_max') ?? '';
   const availability = searchParams.get('availability') ?? '';
   const currency = useSettingsStore((s) => s.currency);
+  const language = useSettingsStore((s) => s.language);
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [refreshKey, setRefreshKey] = useState(0);
   const queryClient = useQueryClient();
@@ -41,7 +42,7 @@ export const HomePage = () => {
     hasNextPage,
     isFetchingNextPage,
   } = useInfiniteQuery({
-    queryKey: ['products', q, sort, priceMin, priceMax, availability, currency, refreshKey],
+    queryKey: ['products', q, sort, priceMin, priceMax, availability, currency, language, refreshKey],
     queryFn: ({ pageParam = 1 }) =>
       fetchProducts({
         query: q,
@@ -50,6 +51,7 @@ export const HomePage = () => {
         price_max: priceMax,
         availability,
         currency,
+        language,
         page: pageParam,
       }),
     getNextPageParam: (lastPage, allPages) => {
@@ -91,11 +93,11 @@ export const HomePage = () => {
     return () => observer.disconnect();
   }, [fetchNextPage, hasNextPage, isFetchingNextPage]);
 
-  // Invalidate product queries when currency changes
+  // Invalidate product queries when currency or language changes
   useEffect(() => {
     queryClient.invalidateQueries({ queryKey: ['products'] });
     queryClient.invalidateQueries({ queryKey: ['product'] });
-  }, [currency, queryClient]);
+  }, [currency, language, queryClient]);
 
   const updateParam = useCallback(
     (key: string, value: string) => {

@@ -33,7 +33,7 @@ export class TaobaoService {
     return sign;
   }
 
-  async searchProducts(query: string, page = 1, pageSize = 20) {
+  async searchProducts(query: string, page = 1, pageSize = 20, language?: string) {
     if (this.mode === 'MOCK') {
       return this.getMockProducts(query);
     }
@@ -50,7 +50,7 @@ export class TaobaoService {
       // If no query, show mixed recommendations from multiple categories
       if (!query) {
         try {
-          const mixed = await this.getMixedRecommendations(page, pageSize, accessToken);
+          const mixed = await this.getMixedRecommendations(page, pageSize, accessToken, language);
           if (mixed && mixed.length > 0) {
             return mixed;
           }
@@ -76,6 +76,11 @@ export class TaobaoService {
         keyword: query,
         sort: 'SALE_QTY_DESC', // Sort by sales for better recommendations
       };
+
+      // Add language parameter if provided (en|vi|ru|ko|ja)
+      if (language && ['en', 'vi', 'ru', 'ko', 'ja'].includes(language)) {
+        params.language = language;
+      }
 
       params.sign = this.generateSign(apiPath, params);
 
@@ -117,14 +122,20 @@ export class TaobaoService {
         // The actual cheapest SKU price will be calculated in getProductDetails
         const priceYuan = toFen(item.coupon_price || item.price || '0');
         
+        // Use multi_language_info if available for translated title
+        const multiLang = item.multi_language_info;
+        const title = multiLang?.title || item.title || 'Taobao Product';
+        const imageUrl = multiLang?.main_image_url || item.main_image_url || 'https://picsum.photos/400/400';
+        
         return {
           id: item.item_id?.toString() || `tw-${Date.now()}-${Math.random()}`,
-          title: item.title || 'Taobao Product',
+          title,
           price_cny: priceYuan,
-          images: [item.main_image_url || 'https://picsum.photos/400/400'],
+          images: [imageUrl],
           rating: 4.5,
           sales: item.inventory || 0,
           coupon_price_cny: item.coupon_price ? toFen(item.coupon_price) : null,
+          multi_language_info: multiLang || null,
           mock: false,
         };
       });
@@ -138,7 +149,7 @@ export class TaobaoService {
    * Get mixed recommendations from multiple categories for main page
    * Shows diverse products from different categories
    */
-  private async getMixedRecommendations(page: number, pageSize: number, accessToken: string) {
+  private async getMixedRecommendations(page: number, pageSize: number, accessToken: string, language?: string) {
     const keywords = this.getRecommendationKeywords();
     const timestamp = Date.now().toString();
     const apiPath = '/traffic/item/search';
@@ -169,6 +180,11 @@ export class TaobaoService {
           keyword,
           sort: 'SALE_QTY_DESC',
         };
+
+        // Add language parameter if provided (en|vi|ru|ko|ja)
+        if (language && ['en', 'vi', 'ru', 'ko', 'ja'].includes(language)) {
+          params.language = language;
+        }
 
         params.sign = this.generateSign(apiPath, params);
 
@@ -210,14 +226,20 @@ export class TaobaoService {
       // Use coupon_price if available (most accurate), otherwise use price
       const priceYuan = toFen(item.coupon_price || item.price || '0');
       
+      // Use multi_language_info if available for translated title
+      const multiLang = item.multi_language_info;
+      const title = multiLang?.title || item.title || 'Taobao Product';
+      const imageUrl = multiLang?.main_image_url || item.main_image_url || 'https://picsum.photos/400/400';
+      
       return {
         id: item.item_id?.toString() || `tw-${Date.now()}-${Math.random()}`,
-        title: item.title || 'Taobao Product',
+        title,
         price_cny: priceYuan,
-        images: [item.main_image_url || 'https://picsum.photos/400/400'],
+        images: [imageUrl],
         rating: 4.5,
         sales: item.inventory || 0,
         coupon_price_cny: item.coupon_price ? toFen(item.coupon_price) : null,
+        multi_language_info: multiLang || null,
         mock: false,
       };
     });
@@ -270,7 +292,7 @@ export class TaobaoService {
   }
 
 
-  async getProductDetails(itemId: string) {
+  async getProductDetails(itemId: string, language?: string) {
     if (this.mode === 'MOCK' || itemId.startsWith('mock-')) {
       return this.getMockProductDetails(itemId);
     }
@@ -298,6 +320,11 @@ export class TaobaoService {
         access_token: accessToken,
       };
 
+      // Add language parameter if provided (en|vi|ru|ko|ja)
+      if (language && ['en', 'vi', 'ru', 'ko', 'ja'].includes(language)) {
+        params.language = language;
+      }
+
       params.sign = this.generateSign(apiPath, params);
 
       this.logger.log(`Calling TaoWorld Traffic item.get for ${itemId}`);
@@ -319,8 +346,11 @@ export class TaobaoService {
 
       this.logger.log(`✓ Successfully fetched REAL Taobao item ${itemId} with full details`);
       
-      // Extract images from pic_urls or fallback to main_image_url
-      const images = item.pic_urls || (item.main_image_url ? [item.main_image_url] : ['https://picsum.photos/400/400']);
+      // Use multi_language_info if available for translated content
+      const multiLang = item.multi_language_info;
+      
+      // Extract images from pic_urls or fallback to main_image_url (use translated image if available)
+      const images = item.pic_urls || (multiLang?.main_image_url || item.main_image_url ? [multiLang?.main_image_url || item.main_image_url] : ['https://picsum.photos/400/400']);
       
       // Calculate total inventory from SKUs
       const totalInventory = item.sku_list?.reduce((sum: number, sku: any) => sum + (parseInt(sku.quantity) || 0), 0) || item.inventory || 0;
@@ -336,21 +366,29 @@ export class TaobaoService {
       const itemFen = parseInt(item.price || item.promotion_price || '0', 10) || 0;
       const baseFen = skuMinFen || itemFen;
       
+      // Use translated title and description if available
+      const title = multiLang?.title || item.title || 'Taobao Product';
+      const description = item.description || item.desc || '';
+      
+      // Use translated properties if available
+      const properties = multiLang?.properties || item.props_list || item.properties || [];
+      
       return {
         id: item.item_id?.toString() || itemId,
-        title: item.title || 'Taobao Product',
+        title,
         price_cny: baseFen / 100, // Price in "fen"
         images,
         rating: 4.5,
         sales: item.sell_number || totalInventory,
         inventory: totalInventory,
-        description: item.description || item.desc || '',
+        description,
         category: item.category_name || '',
         brand: item.brand_name || '',
         shop_name: item.shop_name || item.seller_nick || '',
         video_url: item.video_url || '',
         sku_list: item.sku_list || [],
-        properties: item.props_list || item.properties || [],
+        properties,
+        multi_language_info: multiLang || null,
         mock: false,
       };
     } catch (error) {
