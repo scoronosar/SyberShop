@@ -122,10 +122,10 @@ const resources = {
   },
   uz: {
     translation: {
-      common: { home: 'Asosiy', cart: 'Savat', admin: 'Admin', settings: 'Sozlamalar', account: 'Hisob', login: 'Kirish', logout: 'Chiqish', search: 'Qidirish', loading: 'Yuklanmoqda...', refresh: 'Yangilash', show_more: 'Ko'proq', loading_more: 'Yuklanmoqda...' },
-      home: { title: 'Xitoydan millionlab mahsulot', subtitle: 'Taobaodan to'g'ridan-to'g'ri xarid. Valyuta konvertatsiyasi bilan yaxshi narxlar.', categories: 'Ommabop kategoriyalar', filters: 'Filtrlar va saralash', sort: 'Saralash', price_range: 'Narx oralig'i', availability: 'Mavjudlik', found: 'Mahsulotlar topildi', no_products: 'Mahsulotlar topilmadi', try_different: 'Filtrlarni o'zgartiring.' },
-      product: { select_variant: 'Variantni tanlang', out_of_stock: 'Sotuvda yo'q', quantity: 'Miqdor', select_all: 'Hammasini tanlang', select_all_hint: 'Savatga qo'shishdan oldin hammasini tanlang', variant_unavailable: 'Mavjud emas', variant_unavailable_hint: 'Bu variant yo'q.', add_to_cart: 'Savatga qo'shish', adding: 'Qo'shilmoqda...', loading: 'Yuklanmoqda...' },
-      cart: { title: 'Savat', empty: 'Savat bo'sh', empty_hint: 'Mahsulotlar qo'shing', subtotal: 'Mahsulotlar', delivery: 'Yetkazib berish', checkout: 'Rasmiylashtirish', continue_shopping: 'Davom etish' },
+      common: { home: 'Asosiy', cart: 'Savat', admin: 'Admin', settings: 'Sozlamalar', account: 'Hisob', login: 'Kirish', logout: 'Chiqish', search: 'Qidirish', loading: 'Yuklanmoqda...', refresh: 'Yangilash', show_more: 'Ko\'proq', loading_more: 'Yuklanmoqda...' },
+      home: { title: 'Xitoydan millionlab mahsulot', subtitle: 'Taobaodan to\'g\'ridan-to\'g\'ri xarid. Valyuta konvertatsiyasi bilan yaxshi narxlar.', categories: 'Ommabop kategoriyalar', filters: 'Filtrlar va saralash', sort: 'Saralash', price_range: 'Narx oralig\'i', availability: 'Mavjudlik', found: 'Mahsulotlar topildi', no_products: 'Mahsulotlar topilmadi', try_different: 'Filtrlarni o\'zgartiring.' },
+      product: { select_variant: 'Variantni tanlang', out_of_stock: 'Sotuvda yo\'q', quantity: 'Miqdor', select_all: 'Hammasini tanlang', select_all_hint: 'Savatga qo\'shishdan oldin hammasini tanlang', variant_unavailable: 'Mavjud emas', variant_unavailable_hint: 'Bu variant yo\'q.', add_to_cart: 'Savatga qo\'shish', adding: 'Qo\'shilmoqda...', loading: 'Yuklanmoqda...' },
+      cart: { title: 'Savat', empty: 'Savat bo\'sh', empty_hint: 'Mahsulotlar qo\'shing', subtotal: 'Mahsulotlar', delivery: 'Yetkazib berish', checkout: 'Rasmiylashtirish', continue_shopping: 'Davom etish' },
     },
   },
   fa: {
