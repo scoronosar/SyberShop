@@ -124,6 +124,7 @@ const resources = {
       home: { title: 'Миллионҳо мол аз Чин', subtitle: 'Хариди мустақим аз Taobao. Нархҳои хуб бо табдили асъор.', categories: 'Категорияҳои маъмул', filters: 'Филтрҳо ва мураттабкунӣ', sort: 'Мураттабкунӣ', price_range: 'Диапазони нарх', availability: 'Дастрасӣ', found: 'Маҳсулот ёфт шуд', no_products: 'Ҳеҷ маҳсулот ёфт нашуд', try_different: 'Филтрҳоро иваз кунед.' },
       product: { select_variant: 'Интихоб кунед', out_of_stock: 'Нест', quantity: 'Миқдор', select_all: 'Ҳамаро интихоб кунед', select_all_hint: 'Пеш аз илова ҳамаро интихоб кунед', variant_unavailable: 'Дастнорас', variant_unavailable_hint: 'Ин вариант нест.', add_to_cart: 'Ба сабад', adding: 'Илова...', loading: 'Боргирӣ...' },
       cart: { title: 'Сабад', empty: 'Сабад холӣ', empty_hint: 'Маҳсулот илова кунед', subtotal: 'Маҳсулот', delivery: 'Расонидан', checkout: 'Тасдиқ', continue_shopping: 'Идома' },
+      image_search: { title: 'Ҷустуҷӯ бо тасвир', description: 'Тасвири маҳсулотро бор кунед, мо маҳсулоти монандро дар Taobao меёбем', drag_here: 'Тасвирро инҷо кашед', or_click: 'ё клик кунед барои интихоб', supported_formats: 'Пуштибонӣ: JPG, PNG, WEBP (макс. 3MB)', uploading: 'Боргирӣ...', searching: 'Ҷустуҷӯ...', upload_failed: 'Боргирӣ номуваффақ шуд', no_results: 'Маҳсулот ёфт нашуд', found: '{{count}} маҳсулот ёфт шуд!', error: 'Хатогӣ. TaoWorld-ро дар админ панел пайваст кунед', change_image: 'Тасвири дигар интихоб кунед' },
     },
   },
   kk: {
@@ -132,6 +133,7 @@ const resources = {
       home: { title: 'Қытайдан миллиондаған тауар', subtitle: 'Taobao-дан тікелей сатып алу. Валюта айырбасымен тиімді бағалар.', categories: 'Танымал санаттар', filters: 'Сүзгілер және сұрыптау', sort: 'Сұрыптау', price_range: 'Баға диапазоны', availability: 'Қолжетімділік', found: 'Тауарлар табылды', no_products: 'Тауарлар табылмады', try_different: 'Сүзгілерді өзгертіңіз.' },
       product: { select_variant: 'Нұсқаны таңдаңыз', out_of_stock: 'Қоймада жоқ', quantity: 'Саны', select_all: 'Барлығын таңдаңыз', select_all_hint: 'Себетке қоспас бұрын барлығын таңдаңыз', variant_unavailable: 'Қолжетімсіз', variant_unavailable_hint: 'Бұл нұсқа жоқ.', add_to_cart: 'Себетке қосу', adding: 'Қосылуда...', loading: 'Жүктелуде...' },
       cart: { title: 'Себет', empty: 'Себет бос', empty_hint: 'Тауарларды қосыңыз', subtotal: 'Тауарлар', delivery: 'Жеткізу', checkout: 'Рәсімдеу', continue_shopping: 'Жалғастыру' },
+      image_search: { title: 'Сурет бойынша іздеу', description: 'Тауар суретін жүктеңіз, біз Taobao-да ұқсас тауарларды табамыз', drag_here: 'Суретті мұнда сүйреңіз', or_click: 'немесе файлды таңдау үшін басыңыз', supported_formats: 'Қолдау: JPG, PNG, WEBP (макс. 3MB)', uploading: 'Жүктелуде...', searching: 'Іздеуде...', upload_failed: 'Жүктеу сәтсіз', no_results: 'Тауарлар табылмады', found: '{{count}} тауар табылды!', error: 'Қате. Админ панельде TaoWorld-ті қосыңыз', change_image: 'Басқа суретті таңдаңыз' },
     },
   },
   uz: {
@@ -140,6 +142,7 @@ const resources = {
       home: { title: 'Xitoydan millionlab mahsulot', subtitle: 'Taobaodan to\'g\'ridan-to\'g\'ri xarid. Valyuta konvertatsiyasi bilan yaxshi narxlar.', categories: 'Ommabop kategoriyalar', filters: 'Filtrlar va saralash', sort: 'Saralash', price_range: 'Narx oralig\'i', availability: 'Mavjudlik', found: 'Mahsulotlar topildi', no_products: 'Mahsulotlar topilmadi', try_different: 'Filtrlarni o\'zgartiring.' },
       product: { select_variant: 'Variantni tanlang', out_of_stock: 'Sotuvda yo\'q', quantity: 'Miqdor', select_all: 'Hammasini tanlang', select_all_hint: 'Savatga qo\'shishdan oldin hammasini tanlang', variant_unavailable: 'Mavjud emas', variant_unavailable_hint: 'Bu variant yo\'q.', add_to_cart: 'Savatga qo\'shish', adding: 'Qo\'shilmoqda...', loading: 'Yuklanmoqda...' },
       cart: { title: 'Savat', empty: 'Savat bo\'sh', empty_hint: 'Mahsulotlar qo\'shing', subtotal: 'Mahsulotlar', delivery: 'Yetkazib berish', checkout: 'Rasmiylashtirish', continue_shopping: 'Davom etish' },
+      image_search: { title: 'Rasm bo\'yicha qidirish', description: 'Mahsulot rasmini yuklang, biz Taobao\'da o\'xshash mahsulotlarni topamiz', drag_here: 'Rasmni bu yerga sudrab keling', or_click: 'yoki faylni tanlash uchun bosing', supported_formats: 'Qo\'llab-quvvatlanadi: JPG, PNG, WEBP (maks. 3MB)', uploading: 'Yuklanmoqda...', searching: 'Qidirilmoqda...', upload_failed: 'Yuklash muvaffaqiyatsiz', no_results: 'Mahsulotlar topilmadi', found: '{{count}} mahsulot topildi!', error: 'Xato. Admin panelda TaoWorld\'ni ulang', change_image: 'Boshqa rasmni tanlang' },
     },
   },
   fa: {
@@ -148,6 +151,7 @@ const resources = {
       home: { title: 'میلیون‌ها کالا از چین', subtitle: 'خرید مستقیم از Taobao. قیمت‌های خوب با تبدیل ارز.', categories: 'دسته‌های محبوب', filters: 'فیلترها و مرتب‌سازی', sort: 'مرتب‌سازی', price_range: 'محدوده قیمت', availability: 'موجودی', found: 'کالا یافت شد', no_products: 'کالایی یافت نشد', try_different: 'فیلترها را تغییر دهید.' },
       product: { select_variant: 'گزینه را انتخاب کنید', out_of_stock: 'ناموجود', quantity: 'تعداد', select_all: 'همه را انتخاب کنید', select_all_hint: 'قبل از افزودن همه را انتخاب کنید', variant_unavailable: 'ناموجود', variant_unavailable_hint: 'این گزینه موجود نیست.', add_to_cart: 'افزودن به سبد', adding: 'افزودن...', loading: 'بارگذاری...' },
       cart: { title: 'سبد', empty: 'سبد خالی است', empty_hint: 'محصولات اضافه کنید', subtotal: 'کالاها', delivery: 'تحویل', checkout: 'تسویه', continue_shopping: 'ادامه' },
+      image_search: { title: 'جستجوی تصویر', description: 'عکس محصول را آپلود کنید، ما محصولات مشابه را در Taobao پیدا می‌کنیم', drag_here: 'تصویر را اینجا بکشید', or_click: 'یا برای انتخاب فایل کلیک کنید', supported_formats: 'پشتیبانی می‌شود: JPG, PNG, WEBP (حداکثر 3MB)', uploading: 'در حال آپلود...', searching: 'در حال جستجو...', upload_failed: 'آپلود ناموفق بود', no_results: 'محصولی یافت نشد', found: '{{count}} محصول یافت شد!', error: 'خطا. TaoWorld را در پنل ادمین متصل کنید', change_image: 'تصویر دیگری انتخاب کنید' },
     },
   },
   ky: {
@@ -156,6 +160,7 @@ const resources = {
       home: { title: 'Кытайдан миллиондогон товар', subtitle: 'Taobao-дан түздөн-түз сатып алуу. Валюта айырбашы менен арзан баалар.', categories: 'Популярдуу категориялар', filters: 'Чыпкалар жана тизмелөө', sort: 'Тизмелөө', price_range: 'Баа диапазону', availability: 'Жеткиликтүүлүк', found: 'Товарлар табылды', no_products: 'Товарлар табылган жок', try_different: 'Чыпкаларды өзгөртүңүз.' },
       product: { select_variant: 'Вариантты тандаңыз', out_of_stock: 'Жок', quantity: 'Саны', select_all: 'Баарын тандаңыз', select_all_hint: 'Себетке кошуудан мурун баарын тандаңыз', variant_unavailable: 'Жеткиликсиз', variant_unavailable_hint: 'Бул вариант жок.', add_to_cart: 'Себетке кошуу', adding: 'Кошулууда...', loading: 'Жүктөлүүдө...' },
       cart: { title: 'Себет', empty: 'Себет бош', empty_hint: 'Товарларды кошуңуз', subtotal: 'Товарлар', delivery: 'Жеткирүү', checkout: 'Тастыктоо', continue_shopping: 'Улантуу' },
+      image_search: { title: 'Сүрөт боюнча издөө', description: 'Продукт сүрөтүн жүктөңүз, биз Taobao\'да окшош товарларды табабыз', drag_here: 'Сүрөттү бул жерге сүйрөңүз', or_click: 'же файлды тандоо үчүн басыңыз', supported_formats: 'Колдоо: JPG, PNG, WEBP (макс. 3MB)', uploading: 'Жүктөлүүдө...', searching: 'Издөөдө...', upload_failed: 'Жүктөө ишке ашкан жок', no_results: 'Товарлар табылган жок', found: '{{count}} товар табылды!', error: 'Ката. Админ панелде TaoWorld\'ти тутаңыз', change_image: 'Башка сүрөттү тандаңыз' },
     },
   },
 };
