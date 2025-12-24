@@ -556,13 +556,21 @@ export const AdminPage = () => {
                   </p>
                 )}
               </div>
-              <button
-                onClick={() => refreshTokenMutation.mutate()}
-                disabled={refreshTokenMutation.isPending}
-                className="btn-secondary w-full"
-              >
-                {refreshTokenMutation.isPending ? '⏳ Обновляем...' : '🔄 Обновить токен'}
-              </button>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => refetchOAuth()}
+                  className="btn-secondary flex-1"
+                >
+                  🔄 Обновить статус
+                </button>
+                <button
+                  onClick={() => refreshTokenMutation.mutate()}
+                  disabled={refreshTokenMutation.isPending}
+                  className="btn-secondary flex-1"
+                >
+                  {refreshTokenMutation.isPending ? '⏳ Обновляем...' : '🔄 Обновить токен'}
+                </button>
+              </div>
             </div>
           ) : (
             <div className="space-y-4">

@@ -198,7 +198,7 @@ export class OAuthService {
       });
 
       if (!tokenRecord) {
-        this.logger.warn('No TaoWorld token found in database');
+        this.logger.warn('getValidAccessToken: No TaoWorld token found in database');
         return null;
       }
 
@@ -208,21 +208,22 @@ export class OAuthService {
       const sevenDaysFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
       
       if (tokenRecord.expiresAt < sevenDaysFromNow && tokenRecord.refreshToken && tokenRecord.refreshExpiresAt && tokenRecord.refreshExpiresAt > now) {
-        this.logger.log('Access token expiring soon, refreshing...');
+        this.logger.log('getValidAccessToken: Access token expiring soon, refreshing...');
         const refreshed = await this.refreshAccessToken(tokenRecord.refreshToken);
         return refreshed.access_token;
       }
 
       // If token is still valid
       if (tokenRecord.expiresAt > now) {
+        this.logger.debug(`getValidAccessToken: Returning valid token for account: ${tokenRecord.account || 'unknown'}`);
         return tokenRecord.accessToken;
       }
 
       // Token expired and cannot be refreshed
-      this.logger.warn('Access token expired and cannot be refreshed');
+      this.logger.warn(`getValidAccessToken: Access token expired (expiresAt: ${tokenRecord.expiresAt.toISOString()}, now: ${now.toISOString()})`);
       return null;
     } catch (error) {
-      this.logger.error(`Failed to get valid access token: ${error.message}`);
+      this.logger.error(`getValidAccessToken: Failed to get valid access token: ${error.message}`);
       return null;
     }
   }
@@ -242,11 +243,29 @@ export class OAuthService {
     shortCode?: string;
     account?: string;
   }) {
-    await this.prisma.taoworldToken.upsert({
-      where: { accessToken: data.accessToken },
-      create: data,
-      update: data,
-    });
+    // Try to find existing token by account first, then by accessToken
+    const existing = data.account 
+      ? await this.prisma.taoworldToken.findFirst({
+          where: { account: data.account },
+        })
+      : null;
+    
+    if (existing) {
+      // Update existing token
+      await this.prisma.taoworldToken.update({
+        where: { id: existing.id },
+        data,
+      });
+      this.logger.log(`Updated existing token for account: ${data.account}`);
+    } else {
+      // Create new token or update by accessToken
+      await this.prisma.taoworldToken.upsert({
+        where: { accessToken: data.accessToken },
+        create: data,
+        update: data,
+      });
+      this.logger.log(`Stored token for account: ${data.account || 'unknown'}`);
+    }
   }
 
   /**
@@ -263,23 +282,26 @@ export class OAuthService {
   async getOAuthStatus(): Promise<{
     connected: boolean;
     account?: string;
-    expiresAt?: Date;
+    expiresAt?: string;
   }> {
     const tokenRecord = await this.prisma.taoworldToken.findFirst({
       orderBy: { createdAt: 'desc' },
     });
 
     if (!tokenRecord) {
+      this.logger.debug('getOAuthStatus: No token found');
       return { connected: false };
     }
 
     const now = new Date();
     const connected = tokenRecord.expiresAt > now;
 
+    this.logger.debug(`getOAuthStatus: Token found, connected=${connected}, account=${tokenRecord.account}, expiresAt=${tokenRecord.expiresAt.toISOString()}`);
+
     return {
       connected,
       account: tokenRecord.account || undefined,
-      expiresAt: tokenRecord.expiresAt,
+      expiresAt: tokenRecord.expiresAt.toISOString(),
     };
   }
 
