@@ -243,7 +243,7 @@ export const HomePage = () => {
         </h2>
           <div className="hidden sm:flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-primary-100 to-amber-100 border border-primary-200">
             <span className="text-sm font-semibold text-primary-700">
-              {data?.length || 0} товаров
+              {allProducts.length} товаров
             </span>
           </div>
         </div>
