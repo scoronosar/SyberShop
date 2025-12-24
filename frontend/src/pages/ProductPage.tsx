@@ -14,6 +14,7 @@ export const ProductPage = () => {
   const [qty, setQty] = useState(1);
   const [selectedImage, setSelectedImage] = useState(0);
   const [selectedSku, setSelectedSku] = useState<any>(null);
+  const [selectedOptions, setSelectedOptions] = useState<Record<string, string>>({});
   const [activeTab, setActiveTab] = useState<'description' | 'specs' | 'delivery'>('description');
   const queryClient = useQueryClient();
   const role = useAuthStore((s) => s.role);
@@ -262,27 +263,144 @@ export const ProductPage = () => {
           </button>
         </div>
 
-        {/* SKU Selector */}
-        {data.sku_list && data.sku_list.length > 0 && (
-          <div className="card p-6 space-y-4">
-            <h3 className="text-base font-bold text-gray-800">Выберите вариант:</h3>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-              {data.sku_list.map((sku: any, idx: number) => (
-                <button
-                  key={sku.sku_id || idx}
-                  onClick={() => setSelectedSku(sku)}
-                  className={`p-3 rounded-xl border-2 transition-all text-sm font-semibold ${
-                    selectedSku?.sku_id === sku.sku_id
-                      ? 'border-primary-500 bg-primary-50 text-primary-700 shadow-md'
-                      : 'border-gray-200 hover:border-primary-300 bg-white'
-                  }`}
-                >
-                  {sku.properties?.map((p: any) => p.value_name || p.value).join(' / ') || `Вариант ${idx + 1}`}
-                </button>
-              ))}
+        {/* Enhanced SKU Selector */}
+        {data.sku_list && data.sku_list.length > 0 && (() => {
+          // Group properties by type (color, size, etc.)
+          const propertyGroups = new Map<string, Set<string>>();
+          const propertyDetails = new Map<string, Map<string, any>>();
+          
+          data.sku_list.forEach((sku: any) => {
+            sku.properties?.forEach((prop: any) => {
+              const propName = prop.prop_name || prop.name || 'Опция';
+              const propValue = prop.value_name || prop.value || '';
+              
+              if (!propertyGroups.has(propName)) {
+                propertyGroups.set(propName, new Set());
+                propertyDetails.set(propName, new Map());
+              }
+              
+              propertyGroups.get(propName)!.add(propValue);
+              propertyDetails.get(propName)!.set(propValue, {
+                image: sku.images?.[0] || prop.image,
+                available: sku.inventory > 0,
+              });
+            });
+          });
+
+          // Find matching SKU based on selected options
+          const matchingSku = data.sku_list.find((sku: any) => {
+            return Object.entries(selectedOptions).every(([propName, propValue]) => {
+              return sku.properties?.some((p: any) => 
+                (p.prop_name || p.name) === propName && 
+                (p.value_name || p.value) === propValue
+              );
+            });
+          });
+
+          // Update selected SKU when options change
+          if (matchingSku && matchingSku.sku_id !== selectedSku?.sku_id) {
+            setSelectedSku(matchingSku);
+          }
+
+          return (
+            <div className="card p-6 space-y-6">
+              <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
+                <span>✨</span>
+                <span>Выберите параметры:</span>
+              </h3>
+              
+              {Array.from(propertyGroups.entries()).map(([propName, values]) => {
+                const details = propertyDetails.get(propName)!;
+                const hasImages = Array.from(values).some(v => details.get(v)?.image);
+                
+                return (
+                  <div key={propName} className="space-y-3">
+                    <label className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                      {propName === 'Color' || propName === '颜色分类' || propName.includes('цвет') || propName.includes('Цвет') ? '🎨' : '📏'}
+                      <span>{propName}</span>
+                      {selectedOptions[propName] && (
+                        <span className="text-primary-600 font-bold">
+                          → {selectedOptions[propName]}
+                        </span>
+                      )}
+                    </label>
+                    
+                    <div className={`grid gap-3 ${hasImages ? 'grid-cols-4 sm:grid-cols-6' : 'grid-cols-2 sm:grid-cols-4'}`}>
+                      {Array.from(values).map((value) => {
+                        const detail = details.get(value);
+                        const isSelected = selectedOptions[propName] === value;
+                        
+                        return (
+                          <button
+                            key={value}
+                            onClick={() => {
+                              setSelectedOptions(prev => ({
+                                ...prev,
+                                [propName]: value
+                              }));
+                            }}
+                            disabled={!detail?.available}
+                            className={`relative p-3 rounded-xl border-2 transition-all duration-200 font-medium text-sm ${
+                              isSelected
+                                ? 'border-primary-500 bg-primary-50 text-primary-700 shadow-lg scale-105 ring-2 ring-primary-200'
+                                : detail?.available
+                                ? 'border-gray-200 hover:border-primary-300 bg-white hover:shadow-md hover:scale-102'
+                                : 'border-gray-200 bg-gray-50 text-gray-400 cursor-not-allowed opacity-50'
+                            }`}
+                          >
+                            {detail?.image && hasImages ? (
+                              <div className="space-y-2">
+                                <div className="aspect-square rounded-lg overflow-hidden bg-gray-100">
+                                  <img 
+                                    src={detail.image} 
+                                    alt={value}
+                                    className="w-full h-full object-cover"
+                                  />
+                                </div>
+                                <div className="text-xs text-center truncate">{value}</div>
+                              </div>
+                            ) : (
+                              <div className="text-center py-1">{value}</div>
+                            )}
+                            {!detail?.available && (
+                              <div className="absolute inset-0 flex items-center justify-center bg-white/80 rounded-xl">
+                                <span className="text-xs font-bold text-red-500">Нет</span>
+                              </div>
+                            )}
+                            {isSelected && (
+                              <div className="absolute -top-1 -right-1 w-5 h-5 bg-primary-500 rounded-full flex items-center justify-center">
+                                <span className="text-white text-xs">✓</span>
+                              </div>
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
+
+              {matchingSku && (
+                <div className="p-4 bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl border-2 border-green-200">
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-1">
+                      <div className="text-xs text-gray-600">Выбранный вариант:</div>
+                      <div className="font-bold text-gray-900">
+                        {matchingSku.properties?.map((p: any) => p.value_name || p.value).join(' • ')}
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-xs text-gray-600">Наличие:</div>
+                      <div className="font-bold text-green-600">
+                        {matchingSku.inventory > 0 ? `${matchingSku.inventory} шт.` : 'Нет в наличии'}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
-          </div>
-        )}
+          );
+        })()}
 
         <div className="card p-6 space-y-4">
           <label className="text-sm font-bold text-gray-800">Количество</label>

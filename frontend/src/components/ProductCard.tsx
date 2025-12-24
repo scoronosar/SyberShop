@@ -25,56 +25,105 @@ export const ProductCard = ({ product }: Props) => {
   return (
     <Link
       to={`/product/${product.id}`}
-      className="group block bg-white border border-gray-200 rounded-2xl p-3 shadow-soft hover:-translate-y-1 hover:shadow-glow-lg hover:border-primary-300 transition-all duration-300 text-sm"
+      className="group block bg-white border-2 border-gray-200 rounded-2xl overflow-hidden shadow-lg hover:-translate-y-2 hover:shadow-2xl hover:border-primary-400 transition-all duration-300"
     >
-      <div className="aspect-square overflow-hidden rounded-xl mb-3 bg-gradient-to-br from-gray-100 to-gray-50 relative">
+      {/* Image Container */}
+      <div className="aspect-square overflow-hidden bg-gradient-to-br from-gray-100 via-white to-gray-50 relative">
         <img
           src={product.images?.[0]}
           alt={product.title}
-          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+          className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-125"
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
         
-        {product.mock && (
-          <span className="absolute top-2 left-2 px-2.5 py-1 text-[10px] font-bold rounded-lg bg-primary-100 text-primary-600 backdrop-blur-sm border border-primary-200 shadow-sm">
-            Mock
-          </span>
-        )}
+        {/* Gradient Overlay on Hover */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+        
+        {/* Badges */}
+        <div className="absolute top-3 left-3 flex flex-col gap-2">
+          {!product.mock && (
+            <span className="px-2.5 py-1 text-[10px] font-bold rounded-lg bg-green-500/95 text-white backdrop-blur-sm shadow-lg flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+              TAOBAO
+            </span>
+          )}
+          {product.mock && (
+            <span className="px-2.5 py-1 text-[10px] font-bold rounded-lg bg-primary-500/95 text-white backdrop-blur-sm border border-white/30 shadow-lg">
+              MOCK
+            </span>
+          )}
+        </div>
         
         {product.rating && (
-          <div className="absolute top-2 right-2 px-2 py-1 text-[10px] font-semibold rounded-lg bg-white/90 backdrop-blur-sm text-yellow-600 flex items-center gap-1 shadow-sm">
+          <div className="absolute top-3 right-3 px-2.5 py-1.5 text-[11px] font-bold rounded-lg bg-white/95 backdrop-blur-md text-amber-600 flex items-center gap-1 shadow-lg">
             <span>⭐</span>
-            <span>{product.rating}</span>
+            <span>{product.rating.toFixed(1)}</span>
           </div>
         )}
         
         {product.sales && product.sales > 1000 && (
-          <div className="absolute bottom-2 left-2 px-2.5 py-1 text-[10px] font-semibold rounded-lg bg-emerald-500/90 backdrop-blur-sm text-white shadow-sm">
-            🔥 {product.sales}+ продаж
+          <div className="absolute bottom-3 left-3 px-3 py-1.5 text-[10px] font-bold rounded-lg bg-gradient-to-r from-red-500 to-orange-500 backdrop-blur-sm text-white shadow-lg flex items-center gap-1">
+            <span>🔥</span>
+            <span>{product.sales}+</span>
           </div>
         )}
-      </div>
-      
-      <h3 className="text-sm font-semibold mt-1 line-clamp-2 min-h-[40px] text-gray-800 group-hover:text-primary-600 transition-colors">
-        {product.title}
-      </h3>
-      
-      <div className="mt-2 pt-2 border-t border-gray-100">
-        <div className="flex items-baseline justify-between">
-          <div className="text-lg font-extrabold text-primary-600 group-hover:text-primary-700">
-            {product.final_item_price.toFixed(2)} {currencySymbol}
+
+        {product.inventory !== undefined && product.inventory < 10 && product.inventory > 0 && (
+          <div className="absolute bottom-3 right-3 px-2.5 py-1 text-[10px] font-bold rounded-lg bg-amber-500/95 text-white backdrop-blur-sm shadow-lg">
+            ⚠️ Осталось {product.inventory}
           </div>
-          {role === 'admin' && (
-            <span className="text-xs text-gray-500 font-medium">
-              {product.price_cny} ¥
-            </span>
-          )}
+        )}
+
+        {/* Quick view button */}
+        <div className="absolute inset-x-0 bottom-0 p-3 opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-y-2 group-hover:translate-y-0">
+          <div className="text-xs text-center py-2 bg-white/95 backdrop-blur-md text-gray-900 rounded-xl font-bold shadow-xl">
+            👁️ Быстрый просмотр
+          </div>
         </div>
       </div>
       
-      <div className="mt-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-        <div className="text-xs text-center py-1.5 bg-primary-50 text-primary-700 rounded-lg font-medium">
-          Подробнее →
+      {/* Product Info */}
+      <div className="p-4 space-y-3">
+        <h3 className="text-sm font-bold line-clamp-2 min-h-[40px] text-gray-900 group-hover:text-primary-600 transition-colors leading-snug">
+          {product.title}
+        </h3>
+        
+        {/* Brand or Shop */}
+        {(product.brand || product.shop_name) && (
+          <div className="flex items-center gap-1.5 text-[11px] text-gray-500">
+            <span>🏪</span>
+            <span className="truncate font-medium">{product.brand || product.shop_name}</span>
+          </div>
+        )}
+
+        {/* Price Section */}
+        <div className="pt-3 border-t-2 border-gray-100 space-y-2">
+          <div className="flex items-baseline justify-between gap-2">
+            <div className="text-xl font-extrabold bg-gradient-to-r from-primary-600 to-primary-500 bg-clip-text text-transparent">
+              {product.final_item_price.toFixed(2)} {currencySymbol}
+            </div>
+            {role === 'admin' && (
+              <span className="text-[11px] text-gray-400 font-semibold">
+                {product.price_cny} ¥
+              </span>
+            )}
+          </div>
+
+          {/* Stock indicator */}
+          {product.inventory !== undefined && (
+            <div className="flex items-center gap-1.5">
+              <div className={`w-2 h-2 rounded-full ${product.inventory > 0 ? 'bg-green-500' : 'bg-red-500'}`} />
+              <span className={`text-[11px] font-semibold ${product.inventory > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                {product.inventory > 0 ? 'В наличии' : 'Нет в наличии'}
+              </span>
+            </div>
+          )}
+        </div>
+
+        {/* Hover Action Button */}
+        <div className="pt-2 opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-y-1 group-hover:translate-y-0">
+          <div className="text-xs text-center py-2.5 bg-gradient-to-r from-primary-500 to-primary-600 text-white rounded-xl font-bold shadow-md">
+            Подробнее →
+          </div>
         </div>
       </div>
     </Link>
