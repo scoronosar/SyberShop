@@ -131,6 +131,26 @@ export const ProductPage = () => {
     // Prevent infinite loops: if we're already on this SKU, do nothing
     if ((matchingSkuId && matchingSkuId === selectedSkuId) || (matchingMpSkuId && matchingMpSkuId === selectedMpSkuId)) return;
 
+    // Some items return empty sku_id/mp_sku_id. Fall back to a stable composite key.
+    const skuKey = (sku: any) => {
+      if (!sku) return '';
+      const mp = (sku?.mp_sku_id ?? sku?.mp_skuId ?? sku?.mp_skuID ?? '').toString();
+      const sid = (sku?.sku_id ?? '').toString();
+      if (mp) return `mp:${mp}`;
+      if (sid) return `sku:${sid}`;
+      const pic = (sku?.pic_url ?? sku?.picUrl ?? sku?.images?.[0] ?? '').toString();
+      const price = (sku?.coupon_price ?? sku?.promotion_price ?? sku?.price ?? '').toString();
+      const props = Array.isArray(sku?.properties)
+        ? sku.properties
+            .map((p: any) => `${p?.prop_name ?? p?.name ?? ''}=${p?.value_name ?? p?.value ?? ''}`)
+            .sort()
+            .join('|')
+        : '';
+      return `p:${price};i:${pic};props:${props}`;
+    };
+
+    if (skuKey(matchingSku) && skuKey(matchingSku) === skuKey(selectedSku)) return;
+
     setSelectedSku(matchingSku);
 
     const skuImg = matchingSku.pic_url || matchingSku.images?.[0];
