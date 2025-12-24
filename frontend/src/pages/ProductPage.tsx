@@ -18,6 +18,7 @@ export const ProductPage = () => {
   const [selectedOptions, setSelectedOptions] = useState<Record<string, string>>({});
   const [activeTab, setActiveTab] = useState<'description' | 'specs' | 'delivery'>('description');
   const [showSkuModal, setShowSkuModal] = useState(false);
+  const [cheapestPreselected, setCheapestPreselected] = useState(false);
   const queryClient = useQueryClient();
   const role = useAuthStore((s) => s.role);
   const currency = useSettingsStore((s) => s.currency);
@@ -123,15 +124,8 @@ export const ProductPage = () => {
   useEffect(() => {
     if (!showSkuModal) return;
     if (!matchingSku) return;
-    const matchingSkuId = (matchingSku?.sku_id ?? '').toString();
-    const matchingMpSkuId = (matchingSku?.mp_sku_id ?? matchingSku?.mp_skuId ?? matchingSku?.mp_skuID ?? '').toString();
-    const selectedSkuId = (selectedSku?.sku_id ?? '').toString();
-    const selectedMpSkuId = (selectedSku?.mp_sku_id ?? selectedSku?.mp_skuId ?? selectedSku?.mp_skuID ?? '').toString();
-
-    // Prevent infinite loops: if we're already on this SKU, do nothing
-    if ((matchingSkuId && matchingSkuId === selectedSkuId) || (matchingMpSkuId && matchingMpSkuId === selectedMpSkuId)) return;
-
-    // Some items return empty sku_id/mp_sku_id. Fall back to a stable composite key.
+    
+    // Build stable key for comparison
     const skuKey = (sku: any) => {
       if (!sku) return '';
       const mp = (sku?.mp_sku_id ?? sku?.mp_skuId ?? sku?.mp_skuID ?? '').toString();
@@ -149,7 +143,11 @@ export const ProductPage = () => {
       return `p:${price};i:${pic};props:${props}`;
     };
 
-    if (skuKey(matchingSku) && skuKey(matchingSku) === skuKey(selectedSku)) return;
+    const matchKey = skuKey(matchingSku);
+    const selectedKey = skuKey(selectedSku);
+    
+    // Prevent infinite loops: if we're already on this SKU, do nothing
+    if (matchKey && matchKey === selectedKey) return;
 
     setSelectedSku(matchingSku);
 
@@ -159,6 +157,17 @@ export const ProductPage = () => {
       if (idx >= 0) setSelectedImage(idx);
     }
   }, [data?.images, matchingSku, selectedSku, showSkuModal]);
+
+  if (isLoading || !data) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="text-center">
+          <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-r from-primary-400 to-primary-600 animate-pulse" />
+          <p className="text-gray-600 font-medium">Загрузка товара...</p>
+        </div>
+      </div>
+    );
+  }
 
   const handleShare = () => {
     if (navigator.share) {
@@ -204,11 +213,14 @@ export const ProductPage = () => {
   // Preselect cheapest SKU (so product page shows the minimum variant price and modal opens with selection)
   useEffect(() => {
     if (!data) return;
+    if (cheapestPreselected) return; // Already preselected, don't run again
     if (!skuList.length) return;
     if (selectedSku || Object.keys(selectedOptions).length) return;
 
     const cheapest = [...skuList].sort((a, b) => getSkuPriceCny(a) - getSkuPriceCny(b))[0];
     if (!cheapest) return;
+    
+    setCheapestPreselected(true); // Mark as done before setState to prevent loops
     setSelectedSku(cheapest);
 
     const nextOptions: Record<string, string> = {};
@@ -224,7 +236,7 @@ export const ProductPage = () => {
       const idx = data.images.indexOf(skuImg);
       if (idx >= 0) setSelectedImage(idx);
     }
-  }, [data, skuList, selectedOptions, selectedSku]);
+  }, [data, skuList, selectedOptions, selectedSku, cheapestPreselected]);
 
   const buildSkuPayloadString = (sku: any) => {
     const mpSkuId = (sku?.mp_sku_id ?? sku?.mp_skuId ?? sku?.mp_skuID ?? '').toString();
@@ -247,18 +259,6 @@ export const ProductPage = () => {
       props,
     });
   };
-
-  // IMPORTANT: keep all hooks above this point (no early returns before hooks)
-  if (isLoading || !data) {
-    return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="text-center">
-          <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-r from-primary-400 to-primary-600 animate-pulse" />
-          <p className="text-gray-600 font-medium">Загрузка товара...</p>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="space-y-6">
