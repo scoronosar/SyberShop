@@ -49,7 +49,7 @@ export class ProductsService {
     // The product page will show the exact minimum SKU price when user clicks on the item
     // This is a reasonable trade-off between accuracy and performance
 
-    let filteredItems = itemsWithAccuratePrices;
+    let filteredItems = items;
 
     if (params.priceMin) {
       const min = Number(params.priceMin);
