@@ -38,14 +38,11 @@ export class ProductsService {
     priceMax?: string;
     availability?: string;
     currency?: string;
+    page?: number;
   }) {
-    // Without query we want diversified "recommendations".
-    // TaobaoService rotates recommended keywords by page number, so vary page deterministically.
-    const hasQuery = Boolean(params.query && params.query.trim().length);
-    const recommendPage = ((Math.floor(Date.now() / (1000 * 60 * 10)) % 10) + 1); // rotate ~every 10 minutes
-    const page = hasQuery ? 1 : recommendPage;
-
-    let items = await this.taobao.searchProducts(params.query || '', page, 20);
+    const page = params.page || 1;
+    const pageSize = 20;
+    let items = await this.taobao.searchProducts(params.query || '', page, pageSize);
 
     if (params.priceMin) {
       const min = Number(params.priceMin);
