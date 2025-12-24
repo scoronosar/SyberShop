@@ -16,6 +16,7 @@ export const ProductPage = () => {
   const [selectedSku, setSelectedSku] = useState<any>(null);
   const [selectedOptions, setSelectedOptions] = useState<Record<string, string>>({});
   const [activeTab, setActiveTab] = useState<'description' | 'specs' | 'delivery'>('description');
+  const [showSkuModal, setShowSkuModal] = useState(false);
   const queryClient = useQueryClient();
   const role = useAuthStore((s) => s.role);
   const currency = useSettingsStore((s) => s.currency);
@@ -46,10 +47,24 @@ export const ProductPage = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['cart'] });
       toast.success('Добавлено в корзину');
+      setShowSkuModal(false);
+      setSelectedOptions({});
+      setSelectedSku(null);
       navigate('/cart');
     },
     onError: () => toast.error('Не удалось добавить в корзину'),
   });
+
+  // Handle "Add to Cart" button click
+  const handleAddToCartClick = () => {
+    // If product has SKU options, show modal for selection
+    if (data?.sku_list && data.sku_list.length > 1) {
+      setShowSkuModal(true);
+    } else {
+      // If no SKU options or only one variant, add directly
+      addMutation.mutate();
+    }
+  };
 
   if (isLoading || !data) {
     return (
@@ -263,181 +278,60 @@ export const ProductPage = () => {
           </button>
         </div>
 
-        {/* Enhanced SKU Selector */}
-        {data.sku_list && data.sku_list.length > 0 && (() => {
-          // Group properties by type (color, size, etc.)
-          const propertyGroups = new Map<string, Set<string>>();
-          const propertyDetails = new Map<string, Map<string, any>>();
-          
-          data.sku_list.forEach((sku: any) => {
-            sku.properties?.forEach((prop: any) => {
-              const propName = prop.prop_name || prop.name || 'Опция';
-              const propValue = prop.value_name || prop.value || '';
-              
-              if (!propertyGroups.has(propName)) {
-                propertyGroups.set(propName, new Set());
-                propertyDetails.set(propName, new Map());
-              }
-              
-              propertyGroups.get(propName)!.add(propValue);
-              propertyDetails.get(propName)!.set(propValue, {
-                image: sku.images?.[0] || prop.image,
-                available: sku.inventory > 0,
-              });
-            });
-          });
-
-          // Find matching SKU based on selected options
-          const matchingSku = data.sku_list.find((sku: any) => {
-            return Object.entries(selectedOptions).every(([propName, propValue]) => {
-              return sku.properties?.some((p: any) => 
-                (p.prop_name || p.name) === propName && 
-                (p.value_name || p.value) === propValue
-              );
-            });
-          });
-
-          // Update selected SKU when options change
-          if (matchingSku && matchingSku.sku_id !== selectedSku?.sku_id) {
-            setSelectedSku(matchingSku);
-          }
-
-          return (
-            <div className="card p-6 space-y-6">
-              <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
-                <span>✨</span>
-                <span>Выберите параметры:</span>
-              </h3>
-              
-              {Array.from(propertyGroups.entries()).map(([propName, values]) => {
-                const details = propertyDetails.get(propName)!;
-                const hasImages = Array.from(values).some(v => details.get(v)?.image);
-                
-                return (
-                  <div key={propName} className="space-y-3">
-                    <label className="text-sm font-semibold text-gray-700 flex items-center gap-2">
-                      {propName === 'Color' || propName === '颜色分类' || propName.includes('цвет') || propName.includes('Цвет') ? '🎨' : '📏'}
-                      <span>{propName}</span>
-                      {selectedOptions[propName] && (
-                        <span className="text-primary-600 font-bold">
-                          → {selectedOptions[propName]}
-                        </span>
-                      )}
-                    </label>
-                    
-                    <div className={`grid gap-3 ${hasImages ? 'grid-cols-4 sm:grid-cols-6' : 'grid-cols-2 sm:grid-cols-4'}`}>
-                      {Array.from(values).map((value) => {
-                        const detail = details.get(value);
-                        const isSelected = selectedOptions[propName] === value;
-                        
-                        return (
-                          <button
-                            key={value}
-                            onClick={() => {
-                              setSelectedOptions(prev => ({
-                                ...prev,
-                                [propName]: value
-                              }));
-                            }}
-                            disabled={!detail?.available}
-                            className={`relative p-3 rounded-xl border-2 transition-all duration-200 font-medium text-sm ${
-                              isSelected
-                                ? 'border-primary-500 bg-primary-50 text-primary-700 shadow-lg scale-105 ring-2 ring-primary-200'
-                                : detail?.available
-                                ? 'border-gray-200 hover:border-primary-300 bg-white hover:shadow-md hover:scale-102'
-                                : 'border-gray-200 bg-gray-50 text-gray-400 cursor-not-allowed opacity-50'
-                            }`}
-                          >
-                            {detail?.image && hasImages ? (
-                              <div className="space-y-2">
-                                <div className="aspect-square rounded-lg overflow-hidden bg-gray-100">
-                                  <img 
-                                    src={detail.image} 
-                                    alt={value}
-                                    className="w-full h-full object-cover"
-                                  />
-                                </div>
-                                <div className="text-xs text-center truncate">{value}</div>
-                              </div>
-                            ) : (
-                              <div className="text-center py-1">{value}</div>
-                            )}
-                            {!detail?.available && (
-                              <div className="absolute inset-0 flex items-center justify-center bg-white/80 rounded-xl">
-                                <span className="text-xs font-bold text-red-500">Нет</span>
-                              </div>
-                            )}
-                            {isSelected && (
-                              <div className="absolute -top-1 -right-1 w-5 h-5 bg-primary-500 rounded-full flex items-center justify-center">
-                                <span className="text-white text-xs">✓</span>
-                              </div>
-                            )}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                );
-              })}
-
-              {matchingSku && (
-                <div className="p-4 bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl border-2 border-green-200">
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-1">
-                      <div className="text-xs text-gray-600">Выбранный вариант:</div>
-                      <div className="font-bold text-gray-900">
-                        {matchingSku.properties?.map((p: any) => p.value_name || p.value).join(' • ')}
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <div className="text-xs text-gray-600">Наличие:</div>
-                      <div className="font-bold text-green-600">
-                        {matchingSku.inventory > 0 ? `${matchingSku.inventory} шт.` : 'Нет в наличии'}
-                      </div>
-                    </div>
+        {/* Quick Info about variants */}
+        {data.sku_list && data.sku_list.length > 1 && (
+          <div className="card p-5 bg-gradient-to-br from-blue-50 to-cyan-50 border-2 border-blue-200">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <span className="text-2xl">🎨</span>
+                <div>
+                  <div className="text-sm font-bold text-gray-900">Доступны варианты</div>
+                  <div className="text-xs text-gray-600">
+                    {data.sku_list.length} вариантов товара
                   </div>
                 </div>
-              )}
-            </div>
-          );
-        })()}
-
-        <div className="card p-6 space-y-4">
-          <label className="text-sm font-bold text-gray-800">Количество</label>
-          <div className="flex items-center gap-3">
-            <div className="flex items-center border-2 border-gray-200 rounded-xl overflow-hidden">
+              </div>
               <button
-                onClick={() => setQty(Math.max(1, qty - 1))}
-                className="px-4 py-3 bg-gray-50 hover:bg-gray-100 font-bold text-gray-700"
+                onClick={() => setShowSkuModal(true)}
+                className="px-4 py-2 rounded-xl bg-primary-500 hover:bg-primary-600 text-white font-bold text-sm transition-all hover:scale-105 shadow-md"
               >
-                −
-              </button>
-              <input
-                type="number"
-                min={1}
-                value={qty}
-                onChange={(e) => setQty(Math.max(1, Number(e.target.value)))}
-                className="w-20 text-center font-bold text-lg border-0 focus:ring-0 py-3"
-              />
-              <button
-                onClick={() => setQty(qty + 1)}
-                className="px-4 py-3 bg-gray-50 hover:bg-gray-100 font-bold text-gray-700"
-              >
-                +
+                Выбрать →
               </button>
             </div>
-            <button
-              onClick={() => addMutation.mutate()}
-              disabled={addMutation.isPending}
-              className="btn-primary flex-1 text-base font-bold py-3"
-            >
-              {addMutation.isPending ? '⏳ Добавляем...' : '🛒 Добавить в корзину'}
-            </button>
           </div>
-          <div className="flex items-center gap-3 text-sm text-gray-600">
-            <div className="flex-1 bg-blue-50 border border-blue-200 rounded-lg p-3 flex items-center gap-2">
-              <span>📦</span>
-              <span>Доставка при прибытии груза</span>
+        )}
+
+        {/* Add to Cart Section */}
+        <div className="card p-6 space-y-4 bg-gradient-to-br from-white to-primary-50/20">
+          <button
+            onClick={handleAddToCartClick}
+            disabled={addMutation.isPending}
+            className="w-full btn-primary text-lg font-bold py-4 shadow-xl hover:shadow-2xl hover:scale-105 transition-all duration-300 flex items-center justify-center gap-3"
+          >
+            {addMutation.isPending ? (
+              <>
+                <div className="w-5 h-5 border-3 border-white border-t-transparent rounded-full animate-spin" />
+                <span>Добавляем...</span>
+              </>
+            ) : (
+              <>
+                <span className="text-2xl">🛒</span>
+                <span>Добавить в корзину</span>
+                {data.sku_list && data.sku_list.length > 1 && (
+                  <span className="text-sm opacity-75">• Выбрать вариант</span>
+                )}
+              </>
+            )}
+          </button>
+          
+          <div className="grid grid-cols-2 gap-3">
+            <div className="flex items-center gap-2 text-xs text-gray-600 bg-blue-50 border border-blue-200 rounded-lg p-3">
+              <span className="text-lg">📦</span>
+              <span className="font-semibold">Доставка при прибытии</span>
+            </div>
+            <div className="flex items-center gap-2 text-xs text-gray-600 bg-green-50 border border-green-200 rounded-lg p-3">
+              <span className="text-lg">✓</span>
+              <span className="font-semibold">Проверка качества</span>
             </div>
           </div>
         </div>
@@ -683,6 +577,252 @@ export const ProductPage = () => {
             </div>
           </div>
         )}
+      </Modal>
+
+      {/* SKU Selection Modal (Taobao Style) */}
+      <Modal 
+        open={showSkuModal} 
+        onClose={() => setShowSkuModal(false)} 
+        title=""
+      >
+        <div className="space-y-6">
+          {/* Modal Header */}
+          <div className="flex items-start gap-4 pb-6 border-b-2 border-gray-200">
+            {/* Product Image */}
+            <div className="w-24 h-24 rounded-xl overflow-hidden border-2 border-gray-200 flex-shrink-0 bg-gray-100">
+              <img 
+                src={selectedSku?.images?.[0] || data.images?.[0]} 
+                alt={data.title}
+                className="w-full h-full object-cover"
+              />
+            </div>
+            
+            {/* Price and Stock */}
+            <div className="flex-1 space-y-2">
+              <div className="text-3xl font-extrabold bg-gradient-to-r from-primary-600 to-primary-500 bg-clip-text text-transparent">
+                {selectedSku?.price ? (selectedSku.price / 100).toFixed(2) : data.final_item_price.toFixed(2)} {currencySymbol}
+              </div>
+              {selectedSku && (
+                <div className="flex items-center gap-2">
+                  <div className={`px-3 py-1 rounded-lg text-xs font-bold ${
+                    selectedSku.inventory > 0 
+                      ? 'bg-green-100 text-green-700 border border-green-200' 
+                      : 'bg-red-100 text-red-700 border border-red-200'
+                  }`}>
+                    {selectedSku.inventory > 0 ? `✓ В наличии: ${selectedSku.inventory} шт.` : '✕ Нет в наличии'}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* SKU Options Selector */}
+          {data.sku_list && data.sku_list.length > 0 && (() => {
+            // Group properties by type
+            const propertyGroups = new Map<string, Set<string>>();
+            const propertyDetails = new Map<string, Map<string, any>>();
+            
+            data.sku_list.forEach((sku: any) => {
+              sku.properties?.forEach((prop: any) => {
+                const propName = prop.prop_name || prop.name || 'Опция';
+                const propValue = prop.value_name || prop.value || '';
+                
+                if (!propertyGroups.has(propName)) {
+                  propertyGroups.set(propName, new Set());
+                  propertyDetails.set(propName, new Map());
+                }
+                
+                propertyGroups.get(propName)!.add(propValue);
+                propertyDetails.get(propName)!.set(propValue, {
+                  image: sku.images?.[0] || prop.image,
+                  available: sku.inventory > 0,
+                });
+              });
+            });
+
+            // Find matching SKU
+            const matchingSku = data.sku_list.find((sku: any) => {
+              return Object.entries(selectedOptions).every(([propName, propValue]) => {
+                return sku.properties?.some((p: any) => 
+                  (p.prop_name || p.name) === propName && 
+                  (p.value_name || p.value) === propValue
+                );
+              });
+            });
+
+            if (matchingSku && matchingSku.sku_id !== selectedSku?.sku_id) {
+              setSelectedSku(matchingSku);
+              // Update main image if SKU has an image
+              if (matchingSku.images?.[0]) {
+                const imageIndex = data.images?.indexOf(matchingSku.images[0]);
+                if (imageIndex !== undefined && imageIndex >= 0) {
+                  setSelectedImage(imageIndex);
+                }
+              }
+            }
+
+            const allOptionsSelected = propertyGroups.size === Object.keys(selectedOptions).length;
+
+            return (
+              <div className="space-y-6">
+                {Array.from(propertyGroups.entries()).map(([propName, values]) => {
+                  const details = propertyDetails.get(propName)!;
+                  const hasImages = Array.from(values).some(v => details.get(v)?.image);
+                  const isColorProperty = propName.toLowerCase().includes('color') || 
+                                         propName.includes('颜色') || 
+                                         propName.toLowerCase().includes('цвет');
+                  
+                  return (
+                    <div key={propName} className="space-y-3">
+                      <label className="text-base font-bold text-gray-900 flex items-center gap-2">
+                        <span className="text-xl">{isColorProperty ? '🎨' : '📏'}</span>
+                        <span>{propName}:</span>
+                        {selectedOptions[propName] && (
+                          <span className="text-primary-600">
+                            {selectedOptions[propName]}
+                          </span>
+                        )}
+                        {!selectedOptions[propName] && (
+                          <span className="text-red-500 text-sm font-normal">* Выберите вариант</span>
+                        )}
+                      </label>
+                      
+                      <div className={`grid gap-3 ${hasImages && isColorProperty ? 'grid-cols-5 sm:grid-cols-6' : 'grid-cols-3 sm:grid-cols-5'}`}>
+                        {Array.from(values).map((value) => {
+                          const detail = details.get(value);
+                          const isSelected = selectedOptions[propName] === value;
+                          
+                          return (
+                            <button
+                              key={value}
+                              onClick={() => {
+                                setSelectedOptions(prev => ({
+                                  ...prev,
+                                  [propName]: value
+                                }));
+                              }}
+                              disabled={!detail?.available}
+                              className={`relative p-3 rounded-xl border-2 transition-all duration-200 font-semibold text-sm ${
+                                isSelected
+                                  ? 'border-primary-500 bg-primary-50 text-primary-700 shadow-xl scale-105 ring-4 ring-primary-200'
+                                  : detail?.available
+                                  ? 'border-gray-300 hover:border-primary-400 bg-white hover:shadow-lg hover:scale-105'
+                                  : 'border-gray-200 bg-gray-100 text-gray-400 cursor-not-allowed opacity-50'
+                              }`}
+                            >
+                              {detail?.image && hasImages && isColorProperty ? (
+                                <div className="space-y-2">
+                                  <div className="aspect-square rounded-lg overflow-hidden bg-gray-100 border border-gray-200">
+                                    <img 
+                                      src={detail.image} 
+                                      alt={value}
+                                      className="w-full h-full object-cover"
+                                    />
+                                  </div>
+                                  <div className="text-xs text-center truncate leading-tight">{value}</div>
+                                </div>
+                              ) : (
+                                <div className="text-center py-2">{value}</div>
+                              )}
+                              {!detail?.available && (
+                                <div className="absolute inset-0 flex items-center justify-center bg-white/90 rounded-xl">
+                                  <span className="text-xs font-bold text-red-600 bg-white px-2 py-1 rounded-md shadow-sm">
+                                    Нет в наличии
+                                  </span>
+                                </div>
+                              )}
+                              {isSelected && (
+                                <div className="absolute -top-2 -right-2 w-6 h-6 bg-primary-500 rounded-full flex items-center justify-center shadow-lg border-2 border-white">
+                                  <span className="text-white text-sm font-bold">✓</span>
+                                </div>
+                              )}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })}
+
+                {/* Quantity Selector */}
+                <div className="space-y-3 pt-4 border-t-2 border-gray-200">
+                  <label className="text-base font-bold text-gray-900 flex items-center gap-2">
+                    <span className="text-xl">🔢</span>
+                    <span>Количество:</span>
+                  </label>
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center border-2 border-gray-300 rounded-xl overflow-hidden shadow-sm">
+                      <button
+                        onClick={() => setQty(Math.max(1, qty - 1))}
+                        className="px-5 py-3 bg-gray-50 hover:bg-gray-100 font-bold text-gray-700 text-lg transition-colors"
+                      >
+                        −
+                      </button>
+                      <input
+                        type="number"
+                        min={1}
+                        value={qty}
+                        onChange={(e) => setQty(Math.max(1, Number(e.target.value)))}
+                        className="w-24 text-center font-bold text-xl border-0 focus:ring-0 py-3 bg-white"
+                      />
+                      <button
+                        onClick={() => setQty(qty + 1)}
+                        className="px-5 py-3 bg-gray-50 hover:bg-gray-100 font-bold text-gray-700 text-lg transition-colors"
+                      >
+                        +
+                      </button>
+                    </div>
+                    {selectedSku && selectedSku.inventory > 0 && (
+                      <div className="text-sm text-gray-600 font-medium">
+                        Максимум: <span className="font-bold text-primary-600">{selectedSku.inventory}</span> шт.
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Confirm Button */}
+                <div className="pt-6 border-t-2 border-gray-200">
+                  {!allOptionsSelected ? (
+                    <div className="p-4 bg-amber-50 border-2 border-amber-200 rounded-xl text-center">
+                      <div className="text-amber-700 font-bold mb-1">⚠️ Выберите все варианты</div>
+                      <div className="text-xs text-amber-600">
+                        Необходимо выбрать все параметры товара перед добавлением в корзину
+                      </div>
+                    </div>
+                  ) : !selectedSku || selectedSku.inventory === 0 ? (
+                    <div className="p-4 bg-red-50 border-2 border-red-200 rounded-xl text-center">
+                      <div className="text-red-700 font-bold mb-1">✕ Вариант недоступен</div>
+                      <div className="text-xs text-red-600">
+                        Выбранный вариант нет в наличии. Попробуйте выбрать другой.
+                      </div>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => addMutation.mutate()}
+                      disabled={addMutation.isPending}
+                      className="w-full bg-gradient-to-r from-primary-500 via-primary-600 to-amber-500 hover:from-primary-600 hover:to-amber-600 text-white py-4 rounded-xl font-bold text-lg shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3"
+                    >
+                      {addMutation.isPending ? (
+                        <>
+                          <div className="w-5 h-5 border-3 border-white border-t-transparent rounded-full animate-spin" />
+                          <span>Добавляем в корзину...</span>
+                        </>
+                      ) : (
+                        <>
+                          <span className="text-2xl">✓</span>
+                          <span>Добавить в корзину</span>
+                          <span className="text-sm opacity-90">
+                            • {qty} шт. • {(selectedSku.price ? (selectedSku.price / 100 * qty) : (data.final_item_price * qty)).toFixed(2)} {currencySymbol}
+                          </span>
+                        </>
+                      )}
+                    </button>
+                  )}
+                </div>
+              </div>
+            );
+          })()}
+        </div>
       </Modal>
     </div>
     </div>
