@@ -123,7 +123,13 @@ export const ProductPage = () => {
   useEffect(() => {
     if (!showSkuModal) return;
     if (!matchingSku) return;
-    if (matchingSku.sku_id === selectedSku?.sku_id && matchingSku.mp_sku_id === selectedSku?.mp_sku_id) return;
+    const matchingSkuId = (matchingSku?.sku_id ?? '').toString();
+    const matchingMpSkuId = (matchingSku?.mp_sku_id ?? matchingSku?.mp_skuId ?? matchingSku?.mp_skuID ?? '').toString();
+    const selectedSkuId = (selectedSku?.sku_id ?? '').toString();
+    const selectedMpSkuId = (selectedSku?.mp_sku_id ?? selectedSku?.mp_skuId ?? selectedSku?.mp_skuID ?? '').toString();
+
+    // Prevent infinite loops: if we're already on this SKU, do nothing
+    if ((matchingSkuId && matchingSkuId === selectedSkuId) || (matchingMpSkuId && matchingMpSkuId === selectedMpSkuId)) return;
 
     setSelectedSku(matchingSku);
 
@@ -132,7 +138,7 @@ export const ProductPage = () => {
       const idx = data.images.indexOf(skuImg);
       if (idx >= 0) setSelectedImage(idx);
     }
-  }, [data?.images, matchingSku, selectedSku?.mp_sku_id, selectedSku?.sku_id, showSkuModal]);
+  }, [data?.images, matchingSku, selectedSku, showSkuModal]);
 
   if (isLoading || !data) {
     return (
