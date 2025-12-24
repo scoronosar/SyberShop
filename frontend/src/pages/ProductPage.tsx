@@ -175,6 +175,7 @@ export const ProductPage = () => {
   const buildSkuPayloadString = (sku: any) => {
     const mpSkuId = (sku?.mp_sku_id ?? sku?.mp_skuId ?? sku?.mp_skuID ?? '').toString();
     const skuId = (sku?.sku_id ?? '').toString();
+    const pic_url = (sku?.pic_url ?? sku?.picUrl ?? sku?.images?.[0] ?? undefined) as string | undefined;
     const props = (sku?.properties ?? [])
       .map((p: any) => ({
         prop_id: p?.prop_id?.toString?.() ?? p?.prop_id ?? undefined,
@@ -188,6 +189,7 @@ export const ProductPage = () => {
     return JSON.stringify({
       mp_sku_id: mpSkuId || undefined,
       sku_id: skuId || undefined,
+      pic_url,
       props,
     });
   };
@@ -492,7 +494,7 @@ export const ProductPage = () => {
               )}
               {data.description ? (
                 <div 
-                  className="prose prose-sm max-w-none text-gray-700"
+                  className="prose max-w-none text-gray-700 lg:prose-lg prose-img:mx-auto prose-a:text-primary-600"
                   dangerouslySetInnerHTML={{ __html: data.description }}
                 />
               ) : (

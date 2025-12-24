@@ -29,6 +29,16 @@ export class CartService {
     private readonly products: ProductsService,
   ) {}
 
+  private safeParseSku(sku?: string | null): any | null {
+    if (!sku) return null;
+    try {
+      const parsed = JSON.parse(sku);
+      return parsed && typeof parsed === 'object' ? parsed : null;
+    } catch {
+      return null;
+    }
+  }
+
   async getCart(userId: string): Promise<CartSummary> {
     const cart = await this.prisma.cart.findFirst({
       where: { userId },
@@ -43,7 +53,12 @@ export class CartService {
       id: item.id,
       productId: item.product.externalId,
       title: item.product.titleOrig,
-      images: item.product.images,
+      images: (() => {
+        const sku = this.safeParseSku(item.sku);
+        const picUrl = sku?.pic_url || sku?.picUrl;
+        if (picUrl) return [picUrl, ...item.product.images];
+        return item.product.images;
+      })(),
       qty: item.qty,
       sku: item.sku,
       price: Number(item.snapshot?.finalPrice ?? 0),
@@ -54,10 +69,31 @@ export class CartService {
   }
 
   async addItem(userId: string, dto: AddCartItemDto, currency?: string) {
-    const product = await this.products.findOne(dto.productId);
+    const product = await this.products.findOne(dto.productId, currency);
     if (!product) throw new NotFoundException('Product not found');
 
-    const pricing = await this.currency.applyPricing(product.price_cny, currency);
+    // If SKU was selected, try to price by that SKU (Taobao sku_list price fields are in "fen")
+    let priceCnyForPricing = product.price_cny;
+    const skuPayload = this.safeParseSku(dto.sku);
+    const mpSkuId = skuPayload?.mp_sku_id?.toString?.() ?? skuPayload?.mp_sku_id ?? null;
+    const skuId = skuPayload?.sku_id?.toString?.() ?? skuPayload?.sku_id ?? null;
+
+    if (skuPayload && Array.isArray((product as any).sku_list) && ((mpSkuId && mpSkuId !== 'undefined') || (skuId && skuId !== 'undefined'))) {
+      const skuList = (product as any).sku_list as any[];
+      const found = skuList.find((s) => {
+        const sMp = (s?.mp_sku_id ?? s?.mp_skuId ?? s?.mp_skuID ?? '').toString();
+        const sSku = (s?.sku_id ?? '').toString();
+        return (mpSkuId && sMp && sMp === mpSkuId) || (skuId && sSku && sSku === skuId);
+      });
+
+      if (found) {
+        const fen =
+          Number.parseInt(found?.coupon_price ?? found?.couponPrice ?? found?.promotion_price ?? found?.promotionPrice ?? found?.price ?? '0', 10) || 0;
+        if (fen > 0) priceCnyForPricing = fen / 100;
+      }
+    }
+
+    const pricing = await this.currency.applyPricing(priceCnyForPricing, currency);
     const productRecord = await this.prisma.product.findUniqueOrThrow({
       where: { externalId: dto.productId },
     });
@@ -96,6 +132,18 @@ export class CartService {
       },
     });
 
+    return this.getCart(userId);
+  }
+
+  async removeItem(userId: string, itemId: string) {
+    const item = await this.prisma.cartItem.findFirst({
+      where: {
+        id: itemId,
+        cart: { userId },
+      },
+    });
+    if (!item) throw new NotFoundException('Cart item not found');
+    await this.prisma.cartItem.delete({ where: { id: itemId } });
     return this.getCart(userId);
   }
 

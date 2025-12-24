@@ -32,7 +32,8 @@ button:active {
 }
 
 .container-xl {
-  @apply max-w-7xl mx-auto px-4;
+  /* Wider desktop layout (better for long descriptions and admin tables) */
+  @apply max-w-screen-2xl mx-auto px-4;
 }
 
 .card-glow {

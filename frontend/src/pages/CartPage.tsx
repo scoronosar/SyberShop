@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { getCart } from '../api/cart';
+import { getCart, removeCartItem } from '../api/cart';
 import { createOrder } from '../api/orders';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
@@ -10,7 +10,37 @@ export const CartPage = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const currency = useSettingsStore((s) => s.currency);
-  const currencySymbol = currency === 'USD' ? '$' : '₽';
+  const currencySymbols: Record<string, string> = {
+    RUB: '₽',
+    USD: '$',
+    UZS: 'сўм',
+    TJS: 'ЅМ',
+    KZT: '₸',
+    CNY: '¥',
+  };
+  const currencySymbol = currencySymbols[currency] || currency;
+
+  const parseSkuLabel = (sku?: string) => {
+    if (!sku) return null;
+    try {
+      const parsed = JSON.parse(sku);
+      const props: Array<{ name: string; value: string }> = Array.isArray(parsed?.props) ? parsed.props : [];
+      if (!props.length) return null;
+      return props.map((p) => `${p.name}: ${p.value}`).join(' • ');
+    } catch {
+      return sku.length > 120 ? `${sku.slice(0, 120)}…` : sku;
+    }
+  };
+
+  const parseSkuPicUrl = (sku?: string) => {
+    if (!sku) return null;
+    try {
+      const parsed = JSON.parse(sku);
+      return (parsed?.pic_url || parsed?.picUrl || null) as string | null;
+    } catch {
+      return null;
+    }
+  };
 
   const createOrderMutation = useMutation({
     mutationFn: createOrder,
@@ -20,6 +50,15 @@ export const CartPage = () => {
       navigate(`/order/${order.id}`);
     },
     onError: () => toast.error('Не удалось создать заказ'),
+  });
+
+  const removeItemMutation = useMutation({
+    mutationFn: (itemId: string) => removeCartItem(itemId),
+    onSuccess: () => {
+      toast.success('Удалено из корзины');
+      queryClient.invalidateQueries({ queryKey: ['cart'] });
+    },
+    onError: () => toast.error('Не удалось удалить товар'),
   });
 
   if (isLoading) {
@@ -71,10 +110,27 @@ export const CartPage = () => {
           <div key={item.id} className="card p-4 hover:shadow-glow transition-all duration-300">
             <div className="flex gap-4">
               <div className="w-24 h-24 rounded-xl overflow-hidden bg-gradient-to-br from-gray-100 to-gray-50 flex-shrink-0 ring-1 ring-gray-200">
-                <img src={item.images?.[0]} className="w-full h-full object-cover" alt={item.title} />
+                <img src={parseSkuPicUrl(item.sku) || item.images?.[0]} className="w-full h-full object-cover" alt={item.title} />
               </div>
               <div className="flex-1">
-                <h3 className="font-bold text-gray-900 mb-2 line-clamp-2">{item.title}</h3>
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <h3 className="font-bold text-gray-900 mb-1 line-clamp-2">{item.title}</h3>
+                    {parseSkuLabel(item.sku) && (
+                      <div className="text-xs text-gray-600 bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1 inline-block">
+                        {parseSkuLabel(item.sku)}
+                      </div>
+                    )}
+                  </div>
+                  <button
+                    onClick={() => removeItemMutation.mutate(item.id)}
+                    disabled={removeItemMutation.isPending}
+                    className="px-3 py-2 rounded-lg border-2 border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300 font-bold text-xs transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                    title="Удалить из корзины"
+                  >
+                    🗑️
+                  </button>
+                </div>
                 <div className="flex items-center gap-4 text-sm">
                   <div className="px-3 py-1 bg-primary-50 text-primary-700 rounded-lg font-semibold">
                     {item.qty} шт.

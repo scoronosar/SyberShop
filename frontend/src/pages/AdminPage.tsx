@@ -26,9 +26,16 @@ export const AdminPage = () => {
     },
   });
 
-  const { data: currencyRates, refetch: refetchCurrencyRates } = useQuery({
+  const {
+    data: currencyRates,
+    isLoading: isLoadingCurrencyRates,
+    isError: isCurrencyRatesError,
+    error: currencyRatesError,
+    refetch: refetchCurrencyRates,
+  } = useQuery({
     queryKey: ['currency-rates'],
     queryFn: getAllCurrencyRates,
+    retry: 1,
   });
 
   const currency = useSettingsStore((s) => s.currency);
@@ -363,7 +370,27 @@ export const AdminPage = () => {
             Настройте курс конвертации из китайского юаня (CNY) в другие валюты и процент наценки.
           </p>
 
-          {currencyRates && currencyRates.length > 0 ? (
+          {isLoadingCurrencyRates ? (
+            <div className="text-center py-4 text-gray-500">
+              <div className="text-3xl mb-2">💱</div>
+              <p className="text-sm">Загрузка курсов валют...</p>
+            </div>
+          ) : isCurrencyRatesError ? (
+            <div className="p-4 bg-red-50 border-2 border-red-200 rounded-xl">
+              <div className="font-bold text-red-700 mb-1">Не удалось загрузить курсы валют</div>
+              <div className="text-xs text-red-600 break-words">
+                {(currencyRatesError as any)?.response?.data?.message ||
+                  (currencyRatesError as any)?.message ||
+                  'Ошибка запроса'}
+              </div>
+              <button
+                onClick={() => refetchCurrencyRates()}
+                className="mt-3 btn-secondary w-full"
+              >
+                🔄 Повторить
+              </button>
+            </div>
+          ) : currencyRates && currencyRates.length > 0 ? (
             <div className="space-y-3">
               {currencyRates.map((rate) => (
                 <div
@@ -462,7 +489,13 @@ export const AdminPage = () => {
           ) : (
             <div className="text-center py-4 text-gray-500">
               <div className="text-3xl mb-2">💱</div>
-              <p className="text-sm">Загрузка курсов валют...</p>
+              <p className="text-sm">Курсы валют не найдены</p>
+              <button
+                onClick={() => refetchCurrencyRates()}
+                className="mt-3 btn-secondary w-full"
+              >
+                🔄 Обновить
+              </button>
             </div>
           )}
         </div>
