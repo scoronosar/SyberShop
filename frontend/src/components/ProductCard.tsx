@@ -46,11 +46,11 @@ export const ProductCard = ({ product }: Props) => {
               TAOBAO
             </span>
           )}
-          {product.mock && (
+        {product.mock && (
             <span className="px-2.5 py-1 text-[10px] font-bold rounded-lg bg-primary-500/95 text-white backdrop-blur-sm border border-white/30 shadow-lg">
               MOCK
-            </span>
-          )}
+          </span>
+        )}
         </div>
         
         {product.rating && (
@@ -84,9 +84,9 @@ export const ProductCard = ({ product }: Props) => {
       {/* Product Info */}
       <div className="p-4 space-y-3">
         <h3 className="text-sm font-bold line-clamp-2 min-h-[40px] text-gray-900 group-hover:text-primary-600 transition-colors leading-snug">
-          {product.title}
-        </h3>
-        
+        {product.title}
+      </h3>
+      
         {/* Brand or Shop */}
         {(product.brand || product.shop_name) && (
           <div className="flex items-center gap-1.5 text-[11px] text-gray-500">
@@ -99,14 +99,14 @@ export const ProductCard = ({ product }: Props) => {
         <div className="pt-3 border-t-2 border-gray-100 space-y-2">
           <div className="flex items-baseline justify-between gap-2">
             <div className="text-xl font-extrabold bg-gradient-to-r from-primary-600 to-primary-500 bg-clip-text text-transparent">
-              {product.final_item_price.toFixed(2)} {currencySymbol}
-            </div>
-            {role === 'admin' && (
-              <span className="text-[11px] text-gray-400 font-semibold">
-                {product.price_cny} ¥
-              </span>
-            )}
+            {product.final_item_price.toFixed(2)} {currencySymbol}
           </div>
+          {role === 'admin' && (
+              <span className="text-[11px] text-gray-400 font-semibold">
+              {product.price_cny} ¥
+            </span>
+          )}
+        </div>
 
           {/* Stock indicator */}
           {product.inventory !== undefined && (
@@ -117,12 +117,12 @@ export const ProductCard = ({ product }: Props) => {
               </span>
             </div>
           )}
-        </div>
-
+      </div>
+      
         {/* Hover Action Button */}
         <div className="pt-2 opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-y-1 group-hover:translate-y-0">
           <div className="text-xs text-center py-2.5 bg-gradient-to-r from-primary-500 to-primary-600 text-white rounded-xl font-bold shadow-md">
-            Подробнее →
+          Подробнее →
           </div>
         </div>
       </div>

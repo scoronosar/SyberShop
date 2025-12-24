@@ -154,6 +154,40 @@ export class OAuthService {
   }
 
   /**
+   * Force refresh access token (manual refresh)
+   */
+  async forceRefreshToken(): Promise<string | null> {
+    try {
+      const tokenRecord = await this.prisma.taoworldToken.findFirst({
+        orderBy: { createdAt: 'desc' },
+      });
+
+      if (!tokenRecord) {
+        this.logger.warn('No TaoWorld token found in database');
+        throw new Error('No token found to refresh');
+      }
+
+      if (!tokenRecord.refreshToken) {
+        this.logger.warn('No refresh token available');
+        throw new Error('No refresh token available');
+      }
+
+      const now = new Date();
+      if (tokenRecord.refreshExpiresAt && tokenRecord.refreshExpiresAt <= now) {
+        this.logger.warn('Refresh token has expired');
+        throw new Error('Refresh token has expired');
+      }
+
+      this.logger.log('Force refreshing access token...');
+      const refreshed = await this.refreshAccessToken(tokenRecord.refreshToken);
+      return refreshed.access_token;
+    } catch (error) {
+      this.logger.error(`Failed to force refresh token: ${error.message}`);
+      throw error;
+    }
+  }
+
+  /**
    * Get valid access token (auto-refresh if needed)
    */
   async getValidAccessToken(): Promise<string | null> {

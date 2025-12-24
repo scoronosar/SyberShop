@@ -1,5 +1,6 @@
 import { Controller, Get, Query, Redirect, UseGuards, HttpException, HttpStatus } from '@nestjs/common';
 import { OAuthService } from './oauth.service';
+import { JwtAuthGuard } from '../auth/jwt.guard';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
 
@@ -65,19 +66,22 @@ export class OAuthController {
    * Admin only
    */
   @Get('refresh')
-  @UseGuards(RolesGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin')
   async refreshToken() {
     try {
-      const token = await this.oauthService.getValidAccessToken();
+      const newToken = await this.oauthService.forceRefreshToken();
       
-      if (!token) {
-        throw new HttpException('No valid token to refresh', HttpStatus.BAD_REQUEST);
+      if (!newToken) {
+        throw new HttpException('Failed to refresh token', HttpStatus.BAD_REQUEST);
       }
 
       return {
         statusCode: 200,
         message: 'Token refreshed successfully',
+        data: {
+          success: true,
+        },
       };
     } catch (error) {
       throw new HttpException(

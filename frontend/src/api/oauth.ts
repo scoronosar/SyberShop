@@ -1,9 +1,9 @@
-import axios from 'axios';
+import { api } from '../lib/api';
 
 const API_URL = '/api/oauth';
 
 export const getOAuthStatus = async () => {
-  const response = await axios.get(`${API_URL}/status`);
+  const response = await api.get(`${API_URL}/status`);
   return response.data;
 };
 
@@ -22,7 +22,7 @@ export const initiateOAuth = () => {
 };
 
 export const refreshOAuthToken = async () => {
-  const response = await axios.get(`${API_URL}/refresh`);
+  const response = await api.get(`${API_URL}/refresh`);
   return response.data;
 };
 

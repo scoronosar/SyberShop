@@ -10,12 +10,13 @@ import type { FormEvent } from 'react';
 import toast from 'react-hot-toast';
 
 export const AdminPage = () => {
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError: isOrdersError, error: ordersError } = useQuery({
     queryKey: ['admin-orders'],
     queryFn: async () => {
       const res = await api.get('/admin/orders');
       return res.data as any[];
     },
+    retry: false,
   });
 
   const { data: oauthStatus, refetch: refetchOAuth } = useQuery({
@@ -176,6 +177,30 @@ export const AdminPage = () => {
     );
   }
 
+  if (isOrdersError) {
+    const errorMessage = (ordersError as any)?.response?.status === 403
+      ? 'Доступ запрещён. Убедитесь, что вы вошли как администратор.'
+      : (ordersError as any)?.response?.data?.message || (ordersError as any)?.message || 'Не удалось загрузить заказы';
+    
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="text-center max-w-md">
+          <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-red-100 flex items-center justify-center">
+            <span className="text-red-600 text-3xl">⚠️</span>
+          </div>
+          <h2 className="text-xl font-bold text-gray-900 mb-2">Ошибка загрузки заказов</h2>
+          <p className="text-gray-600 mb-4">{errorMessage}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="btn-primary"
+          >
+            🔄 Обновить страницу
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-8">
       <div className="flex items-center justify-between">
@@ -195,18 +220,24 @@ export const AdminPage = () => {
       
       <div className="card overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="bg-gradient-to-r from-gray-100 to-gray-50 border-b-2 border-gray-300">
-                <th className="text-left px-4 py-3 font-bold text-gray-700">ID заказа</th>
-                <th className="text-left px-4 py-3 font-bold text-gray-700">Статус</th>
-                <th className="text-left px-4 py-3 font-bold text-gray-700">Сумма</th>
-                <th className="text-left px-4 py-3 font-bold text-gray-700">Доставка</th>
-                <th className="text-left px-4 py-3 font-bold text-gray-700">Дата создания</th>
-              </tr>
-            </thead>
-            <tbody>
-              {data?.map((order: any, idx: number) => (
+          {!data || data.length === 0 ? (
+            <div className="text-center py-8 text-gray-500">
+              <div className="text-3xl mb-2">📦</div>
+              <p className="text-sm">Заказы не найдены</p>
+            </div>
+          ) : (
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-gradient-to-r from-gray-100 to-gray-50 border-b-2 border-gray-300">
+                  <th className="text-left px-4 py-3 font-bold text-gray-700">ID заказа</th>
+                  <th className="text-left px-4 py-3 font-bold text-gray-700">Статус</th>
+                  <th className="text-left px-4 py-3 font-bold text-gray-700">Сумма</th>
+                  <th className="text-left px-4 py-3 font-bold text-gray-700">Доставка</th>
+                  <th className="text-left px-4 py-3 font-bold text-gray-700">Дата создания</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.map((order: any, idx: number) => (
                 <tr key={order.id} className={`border-t hover:bg-primary-50/50 transition-colors ${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}`}>
                   <td className="px-4 py-3 font-mono text-xs text-gray-900 font-semibold">{order.id}</td>
                   <td className="px-4 py-3">
@@ -224,9 +255,10 @@ export const AdminPage = () => {
                     {new Date(order.createdAt).toLocaleString()}
                   </td>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+                ))}
+              </tbody>
+            </table>
+          )}
         </div>
       </div>
 
@@ -379,9 +411,11 @@ export const AdminPage = () => {
             <div className="p-4 bg-red-50 border-2 border-red-200 rounded-xl">
               <div className="font-bold text-red-700 mb-1">Не удалось загрузить курсы валют</div>
               <div className="text-xs text-red-600 break-words">
-                {(currencyRatesError as any)?.response?.data?.message ||
-                  (currencyRatesError as any)?.message ||
-                  'Ошибка запроса'}
+                {(currencyRatesError as any)?.response?.status === 403
+                  ? 'Доступ запрещён. Убедитесь, что вы вошли как администратор.'
+                  : (currencyRatesError as any)?.response?.data?.message ||
+                    (currencyRatesError as any)?.message ||
+                    'Ошибка запроса'}
               </div>
               <button
                 onClick={() => refetchCurrencyRates()}
