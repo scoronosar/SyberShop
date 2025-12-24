@@ -18,7 +18,6 @@ export const ProductPage = () => {
   const [selectedOptions, setSelectedOptions] = useState<Record<string, string>>({});
   const [activeTab, setActiveTab] = useState<'description' | 'specs' | 'delivery'>('description');
   const [showSkuModal, setShowSkuModal] = useState(false);
-  const [cheapestPreselected, setCheapestPreselected] = useState(false);
   const queryClient = useQueryClient();
   const role = useAuthStore((s) => s.role);
   const currency = useSettingsStore((s) => s.currency);
@@ -121,42 +120,12 @@ export const ProductPage = () => {
     );
   }, [selectedOptions, skuList]);
 
+  // Update selected SKU when user changes options in modal (simplified - no loops)
   useEffect(() => {
     if (!showSkuModal) return;
     if (!matchingSku) return;
-    
-    // Build stable key for comparison
-    const skuKey = (sku: any) => {
-      if (!sku) return '';
-      const mp = (sku?.mp_sku_id ?? sku?.mp_skuId ?? sku?.mp_skuID ?? '').toString();
-      const sid = (sku?.sku_id ?? '').toString();
-      if (mp) return `mp:${mp}`;
-      if (sid) return `sku:${sid}`;
-      const pic = (sku?.pic_url ?? sku?.picUrl ?? sku?.images?.[0] ?? '').toString();
-      const price = (sku?.coupon_price ?? sku?.promotion_price ?? sku?.price ?? '').toString();
-      const props = Array.isArray(sku?.properties)
-        ? sku.properties
-            .map((p: any) => `${p?.prop_name ?? p?.name ?? ''}=${p?.value_name ?? p?.value ?? ''}`)
-            .sort()
-            .join('|')
-        : '';
-      return `p:${price};i:${pic};props:${props}`;
-    };
-
-    const matchKey = skuKey(matchingSku);
-    const selectedKey = skuKey(selectedSku);
-    
-    // Prevent infinite loops: if we're already on this SKU, do nothing
-    if (matchKey && matchKey === selectedKey) return;
-
     setSelectedSku(matchingSku);
-
-    const skuImg = matchingSku.pic_url || matchingSku.images?.[0];
-    if (skuImg && data?.images?.length) {
-      const idx = data.images.indexOf(skuImg);
-      if (idx >= 0) setSelectedImage(idx);
-    }
-  }, [data?.images, matchingSku, selectedSku, showSkuModal]);
+  }, [matchingSku, showSkuModal]);
 
   if (isLoading || !data) {
     return (
@@ -210,33 +179,7 @@ export const ProductPage = () => {
     return dict[n]?.[lng] || dict[n]?.en || n;
   };
 
-  // Preselect cheapest SKU (so product page shows the minimum variant price and modal opens with selection)
-  useEffect(() => {
-    if (!data) return;
-    if (cheapestPreselected) return; // Already preselected, don't run again
-    if (!skuList.length) return;
-    if (selectedSku || Object.keys(selectedOptions).length) return;
-
-    const cheapest = [...skuList].sort((a, b) => getSkuPriceCny(a) - getSkuPriceCny(b))[0];
-    if (!cheapest) return;
-    
-    setCheapestPreselected(true); // Mark as done before setState to prevent loops
-    setSelectedSku(cheapest);
-
-    const nextOptions: Record<string, string> = {};
-    (cheapest.properties ?? []).forEach((p: any) => {
-      const propName = p.prop_name || p.name || 'Опция';
-      const propValue = p.value_name || p.value || '';
-      if (propName && propValue) nextOptions[propName] = propValue;
-    });
-    setSelectedOptions(nextOptions);
-
-    const skuImg = cheapest.pic_url || cheapest.images?.[0];
-    if (skuImg && data.images?.length) {
-      const idx = data.images.indexOf(skuImg);
-      if (idx >= 0) setSelectedImage(idx);
-    }
-  }, [data, skuList, selectedOptions, selectedSku, cheapestPreselected]);
+  // Removed auto-preselection to avoid loops. Users now manually select variant.
 
   const buildSkuPayloadString = (sku: any) => {
     const mpSkuId = (sku?.mp_sku_id ?? sku?.mp_skuId ?? sku?.mp_skuID ?? '').toString();
