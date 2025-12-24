@@ -11,6 +11,16 @@ type ProductData = {
   sales?: number;
   images: string[];
   mock?: boolean;
+
+  // optional fields for product detail (see taobao service + Taobao docs)
+  inventory?: number;
+  description?: string;
+  category?: string;
+  brand?: string;
+  shop_name?: string;
+  video_url?: string;
+  sku_list?: any[];
+  properties?: any[];
 };
 
 @Injectable()
@@ -29,7 +39,13 @@ export class ProductsService {
     availability?: string;
     currency?: string;
   }) {
-    let items = await this.taobao.searchProducts(params.query || '', 1, 20);
+    // Without query we want diversified "recommendations".
+    // TaobaoService rotates recommended keywords by page number, so vary page deterministically.
+    const hasQuery = Boolean(params.query && params.query.trim().length);
+    const recommendPage = ((Math.floor(Date.now() / (1000 * 60 * 10)) % 10) + 1); // rotate ~every 10 minutes
+    const page = hasQuery ? 1 : recommendPage;
+
+    let items = await this.taobao.searchProducts(params.query || '', page, 20);
 
     if (params.priceMin) {
       const min = Number(params.priceMin);
@@ -92,6 +108,14 @@ export class ProductsService {
       images: item.images,
       rating: item.rating,
       sales: item.sales,
+      inventory: item.inventory,
+      description: item.description,
+      category: item.category,
+      brand: item.brand,
+      shop_name: item.shop_name,
+      video_url: item.video_url,
+      sku_list: item.sku_list,
+      properties: item.properties,
       rate_used: pricing.rate,
       converted_with_markup: pricing.converted_with_markup,
       service_fee_amount: pricing.service_fee_amount,
