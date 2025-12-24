@@ -160,17 +160,6 @@ export const ProductPage = () => {
     }
   }, [data?.images, matchingSku, selectedSku, showSkuModal]);
 
-  if (isLoading || !data) {
-    return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="text-center">
-          <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-r from-primary-400 to-primary-600 animate-pulse" />
-          <p className="text-gray-600 font-medium">Загрузка товара...</p>
-        </div>
-      </div>
-    );
-  }
-
   const handleShare = () => {
     if (navigator.share) {
       navigator.share({
@@ -258,6 +247,18 @@ export const ProductPage = () => {
       props,
     });
   };
+
+  // IMPORTANT: keep all hooks above this point (no early returns before hooks)
+  if (isLoading || !data) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="text-center">
+          <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-r from-primary-400 to-primary-600 animate-pulse" />
+          <p className="text-gray-600 font-medium">Загрузка товара...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
