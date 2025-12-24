@@ -7,12 +7,11 @@ import toast from 'react-hot-toast';
 import { useAuthStore } from '../state/auth';
 import { useSettingsStore } from '../state/settings';
 import { Modal } from '../components/Modal';
-import { useTranslation } from 'react-i18next';
+import i18n from '../i18n';
 
 export const ProductPage = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { t, i18n } = useTranslation();
   const [qty, setQty] = useState(1);
   const [selectedImage, setSelectedImage] = useState(0);
   const [selectedSku, setSelectedSku] = useState<any>(null);
@@ -22,6 +21,7 @@ export const ProductPage = () => {
   const queryClient = useQueryClient();
   const role = useAuthStore((s) => s.role);
   const currency = useSettingsStore((s) => s.currency);
+  const language = useSettingsStore((s) => s.language);
   
   // Currency symbols mapping
   const currencySymbols: Record<string, string> = {
@@ -202,7 +202,7 @@ export const ProductPage = () => {
 
   const localizePropName = (name: string) => {
     const n = (name || '').trim();
-    const lng = i18n.language;
+    const lng = language || 'ru';
     const dict: Record<string, Record<string, string>> = {
       '颜色分类': { ru: 'Цвет', en: 'Color', tg: 'Ранг', kk: 'Түс', uz: 'Rang', fa: 'رنگ', ky: 'Түс' },
       '颜色': { ru: 'Цвет', en: 'Color', tg: 'Ранг', kk: 'Түс', uz: 'Rang', fa: 'رنگ', ky: 'Түс' },
@@ -806,7 +806,7 @@ export const ProductPage = () => {
                         </span>
                       )}
                       {!selectedOptions[propName] && (
-                        <span className="text-red-500 text-sm font-normal">* {t('product.select_variant', 'Выберите вариант')}</span>
+                        <span className="text-red-500 text-sm font-normal">* {i18n.t('product.select_variant', 'Выберите вариант')}</span>
                       )}
                     </label>
                     
@@ -850,7 +850,7 @@ export const ProductPage = () => {
                             {!detail?.available && (
                               <div className="absolute inset-0 flex items-center justify-center bg-white/90 rounded-xl">
                                 <span className="text-xs font-bold text-red-600 bg-white px-2 py-1 rounded-md shadow-sm">
-                                  {t('product.out_of_stock', 'Нет в наличии')}
+                                  {i18n.t('product.out_of_stock', 'Нет в наличии')}
                                 </span>
                               </div>
                             )}
@@ -871,7 +871,7 @@ export const ProductPage = () => {
                 <div className="space-y-3 pt-4 border-t-2 border-gray-200">
                   <label className="text-base font-bold text-gray-900 flex items-center gap-2">
                     <span className="text-xl">🔢</span>
-                    <span>{t('product.quantity', 'Количество')}:</span>
+                    <span>{i18n.t('product.quantity', 'Количество')}:</span>
                   </label>
                   <div className="flex items-center gap-3">
                     <div className="flex items-center border-2 border-gray-300 rounded-xl overflow-hidden shadow-sm">
@@ -907,16 +907,16 @@ export const ProductPage = () => {
                 <div className="pt-6 border-t-2 border-gray-200 sticky bottom-0 bg-white/95 backdrop-blur-sm">
                   {!Array.from(skuOptionGroups.groups.keys()).every((k) => Boolean(selectedOptions[k])) ? (
                     <div className="p-4 bg-amber-50 border-2 border-amber-200 rounded-xl text-center">
-                      <div className="text-amber-700 font-bold mb-1">⚠️ {t('product.select_all', 'Выберите все варианты')}</div>
+                      <div className="text-amber-700 font-bold mb-1">⚠️ {i18n.t('product.select_all', 'Выберите все варианты')}</div>
                       <div className="text-xs text-amber-600">
-                        {t('product.select_all_hint', 'Необходимо выбрать все параметры товара перед добавлением в корзину')}
+                        {i18n.t('product.select_all_hint', 'Необходимо выбрать все параметры товара перед добавлением в корзину')}
                       </div>
                     </div>
                   ) : !selectedSku || getSkuQuantity(selectedSku) === 0 ? (
                     <div className="p-4 bg-red-50 border-2 border-red-200 rounded-xl text-center">
-                      <div className="text-red-700 font-bold mb-1">✕ {t('product.variant_unavailable', 'Вариант недоступен')}</div>
+                      <div className="text-red-700 font-bold mb-1">✕ {i18n.t('product.variant_unavailable', 'Вариант недоступен')}</div>
                       <div className="text-xs text-red-600">
-                        {t('product.variant_unavailable_hint', 'Выбранный вариант нет в наличии. Попробуйте выбрать другой.')}
+                        {i18n.t('product.variant_unavailable_hint', 'Выбранный вариант нет в наличии. Попробуйте выбрать другой.')}
                       </div>
                     </div>
                   ) : (
@@ -928,12 +928,12 @@ export const ProductPage = () => {
                       {addMutation.isPending ? (
                         <>
                           <div className="w-5 h-5 border-3 border-white border-t-transparent rounded-full animate-spin" />
-                          <span>{t('product.adding', 'Добавляем в корзину...')}</span>
+                          <span>{i18n.t('product.adding', 'Добавляем в корзину...')}</span>
                         </>
                       ) : (
                         <>
                           <span className="text-2xl">✓</span>
-                          <span>{t('product.add_to_cart', 'Добавить в корзину')}</span>
+                          <span>{i18n.t('product.add_to_cart', 'Добавить в корзину')}</span>
                           <span className="text-sm opacity-90">
                             • {qty} шт. • {(getSkuFinalPrice(selectedSku) * qty).toFixed(2)} {currencySymbol}
                           </span>

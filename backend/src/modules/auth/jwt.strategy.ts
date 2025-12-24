@@ -15,14 +15,14 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   }
 
   async validate(payload: any) {
-    // Backward compatibility: old tokens may not contain "role".
+    // Always trust DB role (token may be stale if user role changed after issuing JWT).
     let role = payload.role;
-    if (!role && payload.sub) {
+    if (payload.sub) {
       const user = await this.prisma.user.findUnique({
         where: { id: payload.sub },
         select: { role: true },
       });
-      role = user?.role;
+      role = user?.role ?? role;
     }
     return { sub: payload.sub, email: payload.email, role };
   }
