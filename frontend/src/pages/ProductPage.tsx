@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { fetchProduct } from '../api/products';
@@ -43,7 +43,7 @@ export const ProductPage = () => {
   });
 
   const addMutation = useMutation({
-    mutationFn: () => addToCart(id!, qty, currency),
+    mutationFn: ({ sku }: { sku?: string }) => addToCart(id!, qty, currency, sku),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['cart'] });
       toast.success('Добавлено в корзину');
@@ -62,9 +62,75 @@ export const ProductPage = () => {
       setShowSkuModal(true);
     } else {
       // If no SKU options or only one variant, add directly
-      addMutation.mutate();
+      addMutation.mutate({});
     }
   };
+
+  const skuList = (data?.sku_list ?? []) as any[];
+
+  const skuOptionGroups = useMemo(() => {
+    const groups = new Map<string, Set<string>>();
+    const details = new Map<string, Map<string, any>>();
+
+    skuList.forEach((sku: any) => {
+      (sku.properties ?? []).forEach((prop: any) => {
+        const propName = prop.prop_name || prop.name || 'Опция';
+        const propValue = prop.value_name || prop.value || '';
+
+        if (!groups.has(propName)) {
+          groups.set(propName, new Set());
+          details.set(propName, new Map());
+        }
+
+        groups.get(propName)!.add(propValue);
+
+        const quantity = Number.parseInt(sku.quantity ?? sku.inventory ?? '0', 10) || 0;
+        const status = (sku.status ?? '').toString().toLowerCase();
+        const available = quantity > 0 && status !== 'inactive' && status !== 'cancel';
+
+        const current = details.get(propName)!.get(propValue);
+        details.get(propName)!.set(propValue, {
+          image: current?.image || sku.pic_url || sku.images?.[0] || prop.image,
+          available: Boolean(current?.available) || available,
+          quantity: Math.max(current?.quantity ?? 0, quantity),
+          status: current?.status || status,
+        });
+      });
+    });
+
+    return { groups, details };
+  }, [skuList]);
+
+  const matchingSku = useMemo(() => {
+    if (!skuList.length) return null;
+    const entries = Object.entries(selectedOptions);
+    if (!entries.length) return null;
+    return (
+      skuList.find((sku: any) => {
+        return entries.every(([propName, propValue]) => {
+          return (sku.properties ?? []).some(
+            (p: any) =>
+              (p.prop_name || p.name) === propName &&
+              (p.value_name || p.value) === propValue,
+          );
+        });
+      }) ?? null
+    );
+  }, [selectedOptions, skuList]);
+
+  useEffect(() => {
+    if (!showSkuModal) return;
+    if (!matchingSku) return;
+    if (matchingSku.sku_id === selectedSku?.sku_id && matchingSku.mp_sku_id === selectedSku?.mp_sku_id) return;
+
+    setSelectedSku(matchingSku);
+
+    const skuImg = matchingSku.pic_url || matchingSku.images?.[0];
+    if (skuImg && data?.images?.length) {
+      const idx = data.images.indexOf(skuImg);
+      if (idx >= 0) setSelectedImage(idx);
+    }
+  }, [data?.images, matchingSku, selectedSku?.mp_sku_id, selectedSku?.sku_id, showSkuModal]);
 
   if (isLoading || !data) {
     return (
@@ -88,6 +154,42 @@ export const ProductPage = () => {
       navigator.clipboard.writeText(window.location.href);
       toast.success('Ссылка скопирована!');
     }
+  };
+
+  // Taobao SKU helpers (см. documentation2.txt: sku_list.quantity, pic_url, mp_sku_id/mp_skuId, price/promotion_price/coupon_price в "фенах")
+  const pricingMultiplier = data.price_cny > 0 ? data.final_item_price / data.price_cny : 0;
+
+  const getSkuQuantity = (sku: any) => Number.parseInt(sku?.quantity ?? sku?.inventory ?? '0', 10) || 0;
+  const getSkuImage = (sku: any) => sku?.pic_url || sku?.images?.[0] || null;
+  const getSkuPriceCny = (sku: any) => {
+    const cents =
+      Number.parseInt(sku?.coupon_price ?? sku?.promotion_price ?? sku?.price ?? '0', 10) || 0;
+    return cents / 100;
+  };
+  const getSkuFinalPrice = (sku: any) => {
+    const cny = getSkuPriceCny(sku);
+    if (!pricingMultiplier) return data.final_item_price;
+    return cny * pricingMultiplier;
+  };
+
+  const buildSkuPayloadString = (sku: any) => {
+    const mpSkuId = (sku?.mp_sku_id ?? sku?.mp_skuId ?? sku?.mp_skuID ?? '').toString();
+    const skuId = (sku?.sku_id ?? '').toString();
+    const props = (sku?.properties ?? [])
+      .map((p: any) => ({
+        prop_id: p?.prop_id?.toString?.() ?? p?.prop_id ?? undefined,
+        value_id: p?.value_id?.toString?.() ?? p?.value_id ?? undefined,
+        name: (p?.prop_name ?? p?.name ?? '').toString(),
+        value: (p?.value_name ?? p?.value ?? '').toString(),
+      }))
+      .filter((p: any) => p.name && p.value)
+      .sort((a: any, b: any) => (a.name + a.value).localeCompare(b.name + b.value));
+
+    return JSON.stringify({
+      mp_sku_id: mpSkuId || undefined,
+      sku_id: skuId || undefined,
+      props,
+    });
   };
 
   return (
@@ -591,7 +693,7 @@ export const ProductPage = () => {
             {/* Product Image */}
             <div className="w-24 h-24 rounded-xl overflow-hidden border-2 border-gray-200 flex-shrink-0 bg-gray-100">
               <img 
-                src={selectedSku?.images?.[0] || data.images?.[0]} 
+                src={getSkuImage(selectedSku) || data.images?.[0]} 
                 alt={data.title}
                 className="w-full h-full object-cover"
               />
@@ -600,16 +702,16 @@ export const ProductPage = () => {
             {/* Price and Stock */}
             <div className="flex-1 space-y-2">
               <div className="text-3xl font-extrabold bg-gradient-to-r from-primary-600 to-primary-500 bg-clip-text text-transparent">
-                {selectedSku?.price ? (selectedSku.price / 100).toFixed(2) : data.final_item_price.toFixed(2)} {currencySymbol}
+                {selectedSku ? getSkuFinalPrice(selectedSku).toFixed(2) : data.final_item_price.toFixed(2)} {currencySymbol}
               </div>
               {selectedSku && (
                 <div className="flex items-center gap-2">
                   <div className={`px-3 py-1 rounded-lg text-xs font-bold ${
-                    selectedSku.inventory > 0 
+                    getSkuQuantity(selectedSku) > 0 
                       ? 'bg-green-100 text-green-700 border border-green-200' 
                       : 'bg-red-100 text-red-700 border border-red-200'
                   }`}>
-                    {selectedSku.inventory > 0 ? `✓ В наличии: ${selectedSku.inventory} шт.` : '✕ Нет в наличии'}
+                    {getSkuQuantity(selectedSku) > 0 ? `✓ В наличии: ${getSkuQuantity(selectedSku)} шт.` : '✕ Нет в наличии'}
                   </div>
                 </div>
               )}
@@ -617,132 +719,86 @@ export const ProductPage = () => {
           </div>
 
           {/* SKU Options Selector */}
-          {data.sku_list && data.sku_list.length > 0 && (() => {
-            // Group properties by type
-            const propertyGroups = new Map<string, Set<string>>();
-            const propertyDetails = new Map<string, Map<string, any>>();
-            
-            data.sku_list.forEach((sku: any) => {
-              sku.properties?.forEach((prop: any) => {
-                const propName = prop.prop_name || prop.name || 'Опция';
-                const propValue = prop.value_name || prop.value || '';
-                
-                if (!propertyGroups.has(propName)) {
-                  propertyGroups.set(propName, new Set());
-                  propertyDetails.set(propName, new Map());
-                }
-                
-                propertyGroups.get(propName)!.add(propValue);
-                propertyDetails.get(propName)!.set(propValue, {
-                  image: sku.images?.[0] || prop.image,
-                  available: sku.inventory > 0,
-                });
-              });
-            });
-
-            // Find matching SKU
-            const matchingSku = data.sku_list.find((sku: any) => {
-              return Object.entries(selectedOptions).every(([propName, propValue]) => {
-                return sku.properties?.some((p: any) => 
-                  (p.prop_name || p.name) === propName && 
-                  (p.value_name || p.value) === propValue
-                );
-              });
-            });
-
-            if (matchingSku && matchingSku.sku_id !== selectedSku?.sku_id) {
-              setSelectedSku(matchingSku);
-              // Update main image if SKU has an image
-              if (matchingSku.images?.[0]) {
-                const imageIndex = data.images?.indexOf(matchingSku.images[0]);
-                if (imageIndex !== undefined && imageIndex >= 0) {
-                  setSelectedImage(imageIndex);
-                }
-              }
-            }
-
-            const allOptionsSelected = propertyGroups.size === Object.keys(selectedOptions).length;
-
-            return (
-              <div className="space-y-6">
-                {Array.from(propertyGroups.entries()).map(([propName, values]) => {
-                  const details = propertyDetails.get(propName)!;
-                  const hasImages = Array.from(values).some(v => details.get(v)?.image);
+          {skuList.length > 0 && (
+            <div className="space-y-6">
+              {Array.from(skuOptionGroups.groups.entries()).map(([propName, values]) => {
+                const details = skuOptionGroups.details.get(propName)!;
+                const hasImages = Array.from(values).some((v) => details.get(v)?.image);
                   const isColorProperty = propName.toLowerCase().includes('color') || 
                                          propName.includes('颜色') || 
                                          propName.toLowerCase().includes('цвет');
-                  
-                  return (
-                    <div key={propName} className="space-y-3">
-                      <label className="text-base font-bold text-gray-900 flex items-center gap-2">
-                        <span className="text-xl">{isColorProperty ? '🎨' : '📏'}</span>
-                        <span>{propName}:</span>
-                        {selectedOptions[propName] && (
-                          <span className="text-primary-600">
-                            {selectedOptions[propName]}
-                          </span>
-                        )}
-                        {!selectedOptions[propName] && (
-                          <span className="text-red-500 text-sm font-normal">* Выберите вариант</span>
-                        )}
-                      </label>
-                      
-                      <div className={`grid gap-3 ${hasImages && isColorProperty ? 'grid-cols-5 sm:grid-cols-6' : 'grid-cols-3 sm:grid-cols-5'}`}>
-                        {Array.from(values).map((value) => {
-                          const detail = details.get(value);
-                          const isSelected = selectedOptions[propName] === value;
-                          
-                          return (
-                            <button
-                              key={value}
-                              onClick={() => {
-                                setSelectedOptions(prev => ({
-                                  ...prev,
-                                  [propName]: value
-                                }));
-                              }}
-                              disabled={!detail?.available}
-                              className={`relative p-3 rounded-xl border-2 transition-all duration-200 font-semibold text-sm ${
-                                isSelected
-                                  ? 'border-primary-500 bg-primary-50 text-primary-700 shadow-xl scale-105 ring-4 ring-primary-200'
-                                  : detail?.available
-                                  ? 'border-gray-300 hover:border-primary-400 bg-white hover:shadow-lg hover:scale-105'
-                                  : 'border-gray-200 bg-gray-100 text-gray-400 cursor-not-allowed opacity-50'
-                              }`}
-                            >
-                              {detail?.image && hasImages && isColorProperty ? (
-                                <div className="space-y-2">
-                                  <div className="aspect-square rounded-lg overflow-hidden bg-gray-100 border border-gray-200">
-                                    <img 
-                                      src={detail.image} 
-                                      alt={value}
-                                      className="w-full h-full object-cover"
-                                    />
-                                  </div>
-                                  <div className="text-xs text-center truncate leading-tight">{value}</div>
+                
+                return (
+                  <div key={propName} className="space-y-3">
+                    <label className="text-base font-bold text-gray-900 flex items-center gap-2">
+                      <span className="text-xl">{isColorProperty ? '🎨' : '📏'}</span>
+                      <span>{propName}:</span>
+                      {selectedOptions[propName] && (
+                        <span className="text-primary-600">
+                          {selectedOptions[propName]}
+                        </span>
+                      )}
+                      {!selectedOptions[propName] && (
+                        <span className="text-red-500 text-sm font-normal">* Выберите вариант</span>
+                      )}
+                    </label>
+                    
+                    <div className={`grid gap-3 ${hasImages && isColorProperty ? 'grid-cols-5 sm:grid-cols-6' : 'grid-cols-3 sm:grid-cols-5'}`}>
+                      {Array.from(values).map((value) => {
+                        const detail = details.get(value);
+                        const isSelected = selectedOptions[propName] === value;
+                        
+                        return (
+                          <button
+                            key={value}
+                            onClick={() => {
+                              setSelectedOptions((prev) => ({
+                                ...prev,
+                                [propName]: value,
+                              }));
+                            }}
+                            disabled={!detail?.available}
+                            className={`relative p-3 rounded-xl border-2 transition-all duration-200 font-semibold text-sm ${
+                              isSelected
+                                ? 'border-primary-500 bg-primary-50 text-primary-700 shadow-xl scale-105 ring-4 ring-primary-200'
+                                : detail?.available
+                                ? 'border-gray-300 hover:border-primary-400 bg-white hover:shadow-lg hover:scale-105'
+                                : 'border-gray-200 bg-gray-100 text-gray-400 cursor-not-allowed opacity-50'
+                            }`}
+                          >
+                            {detail?.image && hasImages && isColorProperty ? (
+                              <div className="space-y-2">
+                                <div className="aspect-square rounded-lg overflow-hidden bg-gray-100 border border-gray-200">
+                                  <img 
+                                    src={detail.image} 
+                                    alt={value}
+                                    className="w-full h-full object-cover"
+                                  />
                                 </div>
-                              ) : (
-                                <div className="text-center py-2">{value}</div>
-                              )}
-                              {!detail?.available && (
-                                <div className="absolute inset-0 flex items-center justify-center bg-white/90 rounded-xl">
-                                  <span className="text-xs font-bold text-red-600 bg-white px-2 py-1 rounded-md shadow-sm">
-                                    Нет в наличии
-                                  </span>
-                                </div>
-                              )}
-                              {isSelected && (
-                                <div className="absolute -top-2 -right-2 w-6 h-6 bg-primary-500 rounded-full flex items-center justify-center shadow-lg border-2 border-white">
-                                  <span className="text-white text-sm font-bold">✓</span>
-                                </div>
-                              )}
-                            </button>
-                          );
-                        })}
-                      </div>
+                                <div className="text-xs text-center truncate leading-tight">{value}</div>
+                              </div>
+                            ) : (
+                              <div className="text-center py-2">{value}</div>
+                            )}
+                            {!detail?.available && (
+                              <div className="absolute inset-0 flex items-center justify-center bg-white/90 rounded-xl">
+                                <span className="text-xs font-bold text-red-600 bg-white px-2 py-1 rounded-md shadow-sm">
+                                  Нет в наличии
+                                </span>
+                              </div>
+                            )}
+                            {isSelected && (
+                              <div className="absolute -top-2 -right-2 w-6 h-6 bg-primary-500 rounded-full flex items-center justify-center shadow-lg border-2 border-white">
+                                <span className="text-white text-sm font-bold">✓</span>
+                              </div>
+                            )}
+                          </button>
+                        );
+                      })}
                     </div>
-                  );
-                })}
+                  </div>
+                );
+              })}
 
                 {/* Quantity Selector */}
                 <div className="space-y-3 pt-4 border-t-2 border-gray-200">
@@ -772,9 +828,9 @@ export const ProductPage = () => {
                         +
                       </button>
                     </div>
-                    {selectedSku && selectedSku.inventory > 0 && (
+                    {selectedSku && getSkuQuantity(selectedSku) > 0 && (
                       <div className="text-sm text-gray-600 font-medium">
-                        Максимум: <span className="font-bold text-primary-600">{selectedSku.inventory}</span> шт.
+                        Максимум: <span className="font-bold text-primary-600">{getSkuQuantity(selectedSku)}</span> шт.
                       </div>
                     )}
                   </div>
@@ -782,14 +838,14 @@ export const ProductPage = () => {
 
                 {/* Confirm Button */}
                 <div className="pt-6 border-t-2 border-gray-200">
-                  {!allOptionsSelected ? (
+                  {!Array.from(skuOptionGroups.groups.keys()).every((k) => Boolean(selectedOptions[k])) ? (
                     <div className="p-4 bg-amber-50 border-2 border-amber-200 rounded-xl text-center">
                       <div className="text-amber-700 font-bold mb-1">⚠️ Выберите все варианты</div>
                       <div className="text-xs text-amber-600">
                         Необходимо выбрать все параметры товара перед добавлением в корзину
                       </div>
                     </div>
-                  ) : !selectedSku || selectedSku.inventory === 0 ? (
+                  ) : !selectedSku || getSkuQuantity(selectedSku) === 0 ? (
                     <div className="p-4 bg-red-50 border-2 border-red-200 rounded-xl text-center">
                       <div className="text-red-700 font-bold mb-1">✕ Вариант недоступен</div>
                       <div className="text-xs text-red-600">
@@ -798,7 +854,7 @@ export const ProductPage = () => {
                     </div>
                   ) : (
                     <button
-                      onClick={() => addMutation.mutate()}
+                      onClick={() => addMutation.mutate({ sku: buildSkuPayloadString(selectedSku) })}
                       disabled={addMutation.isPending}
                       className="w-full bg-gradient-to-r from-primary-500 via-primary-600 to-amber-500 hover:from-primary-600 hover:to-amber-600 text-white py-4 rounded-xl font-bold text-lg shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3"
                     >
@@ -812,16 +868,15 @@ export const ProductPage = () => {
                           <span className="text-2xl">✓</span>
                           <span>Добавить в корзину</span>
                           <span className="text-sm opacity-90">
-                            • {qty} шт. • {(selectedSku.price ? (selectedSku.price / 100 * qty) : (data.final_item_price * qty)).toFixed(2)} {currencySymbol}
+                            • {qty} шт. • {(getSkuFinalPrice(selectedSku) * qty).toFixed(2)} {currencySymbol}
                           </span>
                         </>
                       )}
                     </button>
                   )}
                 </div>
-              </div>
-            );
-          })()}
+            </div>
+          )}
         </div>
       </Modal>
     </div>
