@@ -46,9 +46,12 @@ export const ImageSearch = ({ onClose }: Props) => {
           return;
         }
 
-        // Search by image
+        // Search by image with user's language and currency preferences
         toast.loading('Ищем похожие товары...');
-        const searchResult = await searchByImage(uploadResult.data.image_id);
+        const language = localStorage.getItem('sybershop_lang') || 'ru';
+        const currency = localStorage.getItem('sybershop_currency') || 'RUB';
+        const apiLanguage = language === 'en' ? 'en' : language === 'ru' ? 'ru' : undefined;
+        const searchResult = await searchByImage(uploadResult.data.image_id, undefined, undefined, apiLanguage, currency);
         
         if (!searchResult.data || searchResult.data.length === 0) {
           toast.error('Товары не найдены. Попробуйте другое изображение');
