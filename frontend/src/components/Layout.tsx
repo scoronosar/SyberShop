@@ -74,7 +74,7 @@ export const Layout = ({ children }: Props) => {
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
                   placeholder="Найти товары на Taobao..."
-                  className="w-full border-2 border-gray-200 pl-11 pr-20 sm:pr-24 py-2.5 sm:py-3 focus:outline-none focus:ring-4 focus:ring-primary-200 focus:border-primary-400 transition-all rounded-xl sm:rounded-l-2xl sm:rounded-r-none font-medium text-sm placeholder:text-gray-400"
+                  className="w-full border-2 border-gray-200 pl-11 pr-20 sm:pr-24 py-2.5 sm:py-3 focus:outline-none focus:ring-4 focus:ring-primary-200 focus:border-primary-400 transition-all rounded-xl sm:rounded-l-2xl sm:rounded-r-2xl font-medium text-sm placeholder:text-gray-400"
                 />
                 <button
                   type="button"
@@ -90,7 +90,7 @@ export const Layout = ({ children }: Props) => {
               </div>
               <button
                 type="submit"
-                className="bg-gradient-to-r from-primary-500 via-primary-600 to-amber-500 text-white px-6 sm:px-8 py-2.5 sm:py-3 hover:from-primary-600 hover:to-amber-600 hover:shadow-xl hover:scale-105 transition-all duration-300 font-bold rounded-xl sm:rounded-r-2xl sm:rounded-l-none shadow-lg whitespace-nowrap"
+                className="hidden sm:inline-flex bg-gradient-to-r from-primary-500 via-primary-600 to-amber-500 text-white px-6 sm:px-8 py-2.5 sm:py-3 hover:from-primary-600 hover:to-amber-600 hover:shadow-xl hover:scale-105 transition-all duration-300 font-bold rounded-xl sm:rounded-r-2xl sm:rounded-l-none shadow-lg whitespace-nowrap items-center justify-center"
               >
                 Найти
               </button>
