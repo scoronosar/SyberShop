@@ -216,17 +216,12 @@ export class TaobaoService {
     
     this.logger.log(`✓ Mixed recommendations: ${limited.length} items from ${selectedKeywords.length} categories`);
     
-    // Use the same toFen logic as searchProducts to handle prices correctly
-    const toFen = (v: any): number => {
+    // For mixed recommendations, prices are already in yuan (no conversion needed)
+    const parsePrice = (v: any): number => {
       if (v === null || v === undefined) return 0;
       const s = String(v).trim();
       if (!s) return 0;
-      // If price looks like decimal in yuan, convert to fen.
-      if (s.includes('.')) {
-        const f = Number.parseFloat(s);
-        return Number.isFinite(f) ? Math.round(f * 100) : 0;
-      }
-      const n = Number.parseInt(s, 10);
+      const n = Number.parseFloat(s);
       return Number.isFinite(n) ? n : 0;
     };
     
@@ -236,7 +231,7 @@ export class TaobaoService {
       // For search results, we divide by 100 to convert from fen to yuan
       const rawPrice = item.coupon_price || item.price || '0';
       // Parse price directly as yuan (no conversion needed for main page)
-      const priceYuan = toFen(rawPrice);
+      const priceYuan = parsePrice(rawPrice);
       
       // Use multi_language_info if available for translated title
       const multiLang = item.multi_language_info;
@@ -250,7 +245,7 @@ export class TaobaoService {
         images: [imageUrl],
         rating: 4.5,
         sales: item.inventory || 0,
-        coupon_price_cny: item.coupon_price ? toFen(item.coupon_price) : null,
+        coupon_price_cny: item.coupon_price ? parsePrice(item.coupon_price) : null,
         multi_language_info: multiLang || null,
         mock: false,
       };
