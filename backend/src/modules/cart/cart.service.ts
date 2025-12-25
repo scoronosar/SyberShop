@@ -93,7 +93,7 @@ export class CartService {
       }
     }
 
-    const pricing = await this.currency.applyPricing(priceCnyForPricing, currency);
+    const pricing = await this.currency.applyPricing(Number(priceCnyForPricing), currency);
     const productRecord = await this.prisma.product.findUniqueOrThrow({
       where: { externalId: dto.productId },
     });

@@ -130,11 +130,12 @@ export class ProductsService {
           if (cachedProduct) {
             console.log(`Using cached product ${id} from DB`);
             // Return cached product with basic pricing
-            const pricing = await this.currency.applyPricing(cachedProduct.priceCny, currency);
+            const priceCny = Number(cachedProduct.priceCny);
+            const pricing = await this.currency.applyPricing(priceCny, currency);
             return {
               id: cachedProduct.externalId,
               title: cachedProduct.titleOrig || cachedProduct.titleEn || 'Product',
-              price_cny: cachedProduct.priceCny,
+              price_cny: priceCny,
               images: cachedProduct.images || [],
               rating: cachedProduct.rating || 0,
               sales: cachedProduct.sales || 0,
