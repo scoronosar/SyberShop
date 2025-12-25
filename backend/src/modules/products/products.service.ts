@@ -127,6 +127,7 @@ export class ProductsService {
       } catch (enrichError) {
         console.error(`Error enriching product ${id}:`, enrichError);
         // Return basic product data without enrichment if enrichment fails
+        const itemAny = item as any;
         return {
           id: item.id,
           title: item.title,
@@ -134,15 +135,15 @@ export class ProductsService {
           images: item.images,
           rating: item.rating,
           sales: item.sales,
-          inventory: item.inventory,
-          description: item.description,
-          category: item.category,
-          brand: item.brand,
-          shop_name: item.shop_name,
-          video_url: item.video_url,
-          sku_list: item.sku_list,
-          properties: item.properties,
-          multi_language_info: item.multi_language_info,
+          inventory: itemAny.inventory,
+          description: itemAny.description,
+          category: itemAny.category,
+          brand: itemAny.brand,
+          shop_name: itemAny.shop_name,
+          video_url: itemAny.video_url,
+          sku_list: itemAny.sku_list,
+          properties: itemAny.properties,
+          multi_language_info: itemAny.multi_language_info,
           rate_used: 1,
           converted_with_markup: item.price_cny,
           service_fee_amount: 0,
