@@ -216,18 +216,30 @@ export class TaobaoService {
     
     this.logger.log(`✓ Mixed recommendations: ${limited.length} items from ${selectedKeywords.length} categories`);
     
-    const toFen = (val: any) => {
-      if (val == null) return 0;
-      const str = val.toString();
-      const n = Number.parseFloat(str);
+    // Use the same toFen logic as searchProducts to handle prices correctly
+    const toFen = (v: any): number => {
+      if (v === null || v === undefined) return 0;
+      const s = String(v).trim();
+      if (!s) return 0;
+      // If price looks like decimal in yuan, convert to fen.
+      if (s.includes('.')) {
+        const f = Number.parseFloat(s);
+        return Number.isFinite(f) ? Math.round(f * 100) : 0;
+      }
+      const n = Number.parseInt(s, 10);
       return Number.isFinite(n) ? n : 0;
     };
     
     return limited.map((item: any) => {
       // Use coupon_price if available (most accurate), otherwise use price
-      // Note: For mixed recommendations (main page), prices are already in yuan from API
-      // For search results, we divide by 100 to convert from fen to yuan
-      const priceYuan = toFen(item.coupon_price || item.price || '0');
+      // API returns prices in "fen" (cents) - same as search API
+      // But user reports main page prices are already correct, so check if we need conversion
+      // Try to detect: if price > 1000, likely in fen, divide by 100; otherwise assume yuan
+      const rawPrice = item.coupon_price || item.price || '0';
+      const priceFen = toFen(rawPrice);
+      // If price is very large (> 100), assume it's in fen and convert to yuan
+      // Otherwise assume it's already in yuan
+      const priceYuan = priceFen > 100 ? priceFen / 100 : priceFen;
       
       // Use multi_language_info if available for translated title
       const multiLang = item.multi_language_info;
