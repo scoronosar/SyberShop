@@ -232,14 +232,11 @@ export class TaobaoService {
     
     return limited.map((item: any) => {
       // Use coupon_price if available (most accurate), otherwise use price
-      // API returns prices in "fen" (cents) - same as search API
-      // But user reports main page prices are already correct, so check if we need conversion
-      // Try to detect: if price > 1000, likely in fen, divide by 100; otherwise assume yuan
+      // Note: For mixed recommendations (main page), API returns prices already in yuan
+      // For search results, we divide by 100 to convert from fen to yuan
       const rawPrice = item.coupon_price || item.price || '0';
-      const priceFen = toFen(rawPrice);
-      // If price is very large (> 100), assume it's in fen and convert to yuan
-      // Otherwise assume it's already in yuan
-      const priceYuan = priceFen > 100 ? priceFen / 100 : priceFen;
+      // Parse price directly as yuan (no conversion needed for main page)
+      const priceYuan = toFen(rawPrice);
       
       // Use multi_language_info if available for translated title
       const multiLang = item.multi_language_info;
