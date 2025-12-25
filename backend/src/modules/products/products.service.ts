@@ -192,29 +192,42 @@ export class ProductsService {
       const maxPrice = 99999999999999.99;
       const safePriceCny = Math.min(Math.max(item.price_cny || 0, 0), maxPrice);
       
-      // persist minimal product snapshot for cart/order relations
-      await this.prisma.product.upsert({
-        where: { externalId: item.id },
-        update: {
-          priceCny: safePriceCny,
-          titleOrig: item.title,
-          images: item.images,
-          rating: item.rating,
-          sales: item.sales,
-        },
-        create: {
-          externalId: item.id,
-          titleOrig: item.title,
-          titleEn: item.title,
-          priceCny: safePriceCny,
-          images: item.images,
-          rating: item.rating,
-          sales: item.sales,
-        },
-      });
+      // Only try to save to DB if price is reasonable (not 0 and not overflow)
+      if (safePriceCny > 0 && safePriceCny < maxPrice) {
+        try {
+          // persist minimal product snapshot for cart/order relations
+          await this.prisma.product.upsert({
+            where: { externalId: item.id },
+            update: {
+              priceCny: safePriceCny,
+              titleOrig: item.title,
+              images: item.images,
+              rating: item.rating,
+              sales: item.sales,
+            },
+            create: {
+              externalId: item.id,
+              titleOrig: item.title,
+              titleEn: item.title,
+              priceCny: safePriceCny,
+              images: item.images,
+              rating: item.rating,
+              sales: item.sales,
+            },
+          });
+        } catch (dbError: any) {
+          // Log but don't fail if DB operation fails
+          // Check if it's a numeric overflow error - skip saving in that case
+          if (dbError?.code === 'P2002' || dbError?.message?.includes('numeric field overflow')) {
+            console.warn(`Skipping DB save for product ${item.id} due to overflow or constraint error`);
+          } else {
+            console.error(`Error upserting product ${item.id} to DB:`, dbError);
+          }
+        }
+      }
     } catch (dbError) {
       // Log but don't fail if DB operation fails
-      console.error(`Error upserting product ${item.id} to DB:`, dbError);
+      console.error(`Error in enrichProduct DB operation for ${item.id}:`, dbError);
     }
 
     let pricing;
