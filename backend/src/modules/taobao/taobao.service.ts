@@ -225,9 +225,9 @@ export class TaobaoService {
     
     return limited.map((item: any) => {
       // Use coupon_price if available (most accurate), otherwise use price
-      // API returns prices in "fen" (cents), need to divide by 100 to get yuan
-      const priceFen = toFen(item.coupon_price || item.price || '0');
-      const priceYuan = priceFen / 100; // Convert from fen to yuan
+      // Note: For mixed recommendations (main page), prices are already in yuan from API
+      // For search results, we divide by 100 to convert from fen to yuan
+      const priceYuan = toFen(item.coupon_price || item.price || '0');
       
       // Use multi_language_info if available for translated title
       const multiLang = item.multi_language_info;
@@ -241,7 +241,7 @@ export class TaobaoService {
         images: [imageUrl],
         rating: 4.5,
         sales: item.inventory || 0,
-        coupon_price_cny: item.coupon_price ? toFen(item.coupon_price) / 100 : null,
+        coupon_price_cny: item.coupon_price ? toFen(item.coupon_price) : null,
         multi_language_info: multiLang || null,
         mock: false,
       };

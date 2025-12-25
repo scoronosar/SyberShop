@@ -121,7 +121,33 @@ export class ProductsService {
       
       const item = await this.taobao.getProductDetails(id, apiLanguage);
       if (!item) {
-        console.error(`Product ${id} not found or API returned null`);
+        console.error(`Product ${id} not found or API returned null, trying to get from DB cache`);
+        // Try to get product from DB cache if API fails
+        try {
+          const cachedProduct = await this.prisma.product.findUnique({
+            where: { externalId: id },
+          });
+          if (cachedProduct) {
+            console.log(`Using cached product ${id} from DB`);
+            // Return cached product with basic pricing
+            const pricing = await this.currency.applyPricing(cachedProduct.priceCny, currency);
+            return {
+              id: cachedProduct.externalId,
+              title: cachedProduct.titleOrig || cachedProduct.titleEn || 'Product',
+              price_cny: cachedProduct.priceCny,
+              images: cachedProduct.images || [],
+              rating: cachedProduct.rating || 0,
+              sales: cachedProduct.sales || 0,
+              rate_used: pricing.rate,
+              converted_with_markup: pricing.converted_with_markup,
+              service_fee_amount: pricing.service_fee_amount,
+              final_item_price: pricing.final_per_item,
+              mock: false,
+            };
+          }
+        } catch (dbError) {
+          console.error(`Error getting cached product from DB:`, dbError);
+        }
         return null;
       }
       
