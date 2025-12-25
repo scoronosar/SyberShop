@@ -121,10 +121,39 @@ export class ProductsService {
       
       const item = await this.taobao.getProductDetails(id, apiLanguage);
       if (!item) return null;
-      return this.enrichProduct(item, currency);
+      
+      try {
+        return await this.enrichProduct(item, currency);
+      } catch (enrichError) {
+        console.error(`Error enriching product ${id}:`, enrichError);
+        // Return basic product data without enrichment if enrichment fails
+        return {
+          id: item.id,
+          title: item.title,
+          price_cny: item.price_cny,
+          images: item.images,
+          rating: item.rating,
+          sales: item.sales,
+          inventory: item.inventory,
+          description: item.description,
+          category: item.category,
+          brand: item.brand,
+          shop_name: item.shop_name,
+          video_url: item.video_url,
+          sku_list: item.sku_list,
+          properties: item.properties,
+          multi_language_info: item.multi_language_info,
+          rate_used: 1,
+          converted_with_markup: item.price_cny,
+          service_fee_amount: 0,
+          final_item_price: item.price_cny,
+          mock: item.mock ?? false,
+        };
+      }
     } catch (error) {
       console.error(`Error fetching product ${id}:`, error);
-      throw error;
+      // Return null instead of throwing to prevent 500 error
+      return null;
     }
   }
 
@@ -147,28 +176,48 @@ export class ProductsService {
   }
 
   async enrichProduct(item: ProductData, currency?: string) {
-    // persist minimal product snapshot for cart/order relations
-    await this.prisma.product.upsert({
-      where: { externalId: item.id },
-      update: {
-        priceCny: item.price_cny,
-        titleOrig: item.title,
-        images: item.images,
-        rating: item.rating,
-        sales: item.sales,
-      },
-      create: {
-        externalId: item.id,
-        titleOrig: item.title,
-        titleEn: item.title,
-        priceCny: item.price_cny,
-        images: item.images,
-        rating: item.rating,
-        sales: item.sales,
-      },
-    });
+    try {
+      // persist minimal product snapshot for cart/order relations
+      await this.prisma.product.upsert({
+        where: { externalId: item.id },
+        update: {
+          priceCny: item.price_cny,
+          titleOrig: item.title,
+          images: item.images,
+          rating: item.rating,
+          sales: item.sales,
+        },
+        create: {
+          externalId: item.id,
+          titleOrig: item.title,
+          titleEn: item.title,
+          priceCny: item.price_cny,
+          images: item.images,
+          rating: item.rating,
+          sales: item.sales,
+        },
+      });
+    } catch (dbError) {
+      // Log but don't fail if DB operation fails
+      console.error(`Error upserting product ${item.id} to DB:`, dbError);
+    }
 
-    const pricing = await this.currency.applyPricing(item.price_cny, currency);
+    let pricing;
+    try {
+      pricing = await this.currency.applyPricing(item.price_cny, currency);
+    } catch (pricingError) {
+      console.error(`Error applying pricing for product ${item.id}:`, pricingError);
+      // Use default pricing if currency conversion fails
+      pricing = {
+        rate: 1,
+        converted: item.price_cny,
+        converted_with_markup: item.price_cny,
+        service_fee_percent: 0,
+        service_fee_amount: 0,
+        final_per_item: item.price_cny,
+      };
+    }
+
     return {
       id: item.id,
       title: item.title,

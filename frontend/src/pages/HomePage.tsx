@@ -152,7 +152,7 @@ export const HomePage = () => {
                 <span className="text-sm font-semibold tracking-wide">SyberShop × Taobao Global</span>
               </div>
               
-              <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold leading-tight">
+              <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold leading-tight hidden md:block">
                 Миллионы товаров<br />
                 <span className="bg-gradient-to-r from-amber-200 to-yellow-200 bg-clip-text text-transparent">
                   из Китая
