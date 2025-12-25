@@ -108,6 +108,27 @@ export class ProductsService {
   }
 
   async findOne(id: string, currency?: string, language?: string) {
+    try {
+      // Map frontend language codes to Taobao API language codes
+      const languageMap: Record<string, string> = {
+        'en': 'en',
+        'ru': 'ru',
+        'vi': 'vi',
+        'ko': 'ko',
+        'ja': 'ja',
+      };
+      const apiLanguage = language && languageMap[language] ? languageMap[language] : undefined;
+      
+      const item = await this.taobao.getProductDetails(id, apiLanguage);
+      if (!item) return null;
+      return this.enrichProduct(item, currency);
+    } catch (error) {
+      console.error(`Error fetching product ${id}:`, error);
+      throw error;
+    }
+  }
+
+  async getRecommendations(productId: string, currency?: string, language?: string) {
     // Map frontend language codes to Taobao API language codes
     const languageMap: Record<string, string> = {
       'en': 'en',
@@ -118,9 +139,11 @@ export class ProductsService {
     };
     const apiLanguage = language && languageMap[language] ? languageMap[language] : undefined;
     
-    const item = await this.taobao.getProductDetails(id, apiLanguage);
-    if (!item) return null;
-    return this.enrichProduct(item, currency);
+    const items = await this.taobao.getRecommendedProducts(productId, apiLanguage);
+    if (!items || items.length === 0) return [];
+    
+    // Enrich each recommended product with pricing
+    return Promise.all(items.map((item) => this.enrichProduct(item, currency)));
   }
 
   async enrichProduct(item: ProductData, currency?: string) {

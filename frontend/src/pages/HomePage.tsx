@@ -99,6 +99,17 @@ export const HomePage = () => {
     queryClient.invalidateQueries({ queryKey: ['product'] });
   }, [currency, language, queryClient]);
 
+  // Auto-scroll to products when search is initiated
+  const productsStartRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (q && !isLoading && allProducts.length > 0 && productsStartRef.current) {
+      // Small delay to ensure DOM is updated
+      setTimeout(() => {
+        productsStartRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 100);
+    }
+  }, [q, isLoading, allProducts.length]);
+
   const updateParam = useCallback(
     (key: string, value: string) => {
       const next = new URLSearchParams(searchParams);
@@ -438,7 +449,7 @@ export const HomePage = () => {
 
       {/* Products Grid */}
       {!isLoading && allProducts.length > 0 && (
-        <div className="space-y-4">
+        <div className="space-y-4" ref={productsStartRef}>
           <div className="flex items-center justify-between px-2">
             <div className="text-sm font-semibold text-gray-700">
               {t('home.found')}: <span className="text-primary-600 text-lg">{allProducts.length}</span>
@@ -454,25 +465,25 @@ export const HomePage = () => {
             )}
           </div>
           
-          <motion.div 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.5 }}
-            className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4"
-          >
+        <motion.div 
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.5 }}
+          className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4"
+        >
             {allProducts.map((p, idx) => (
-              <motion.div
+            <motion.div
                 key={`${p.id}-${idx}`}
-                initial={{ opacity: 0, translateY: 20 }}
-                animate={{ opacity: 1, translateY: 0 }}
+              initial={{ opacity: 0, translateY: 20 }}
+              animate={{ opacity: 1, translateY: 0 }}
                 transition={{ duration: 0.3, delay: Math.min(idx * 0.04, 1) }}
                 whileHover={{ scale: 1.03 }}
                 className="transform-gpu"
-              >
-                <ProductCard product={p} />
-              </motion.div>
-            ))}
-          </motion.div>
+            >
+              <ProductCard product={p} />
+            </motion.div>
+          ))}
+        </motion.div>
 
           {/* Load More Trigger */}
           {hasNextPage && (
@@ -516,8 +527,8 @@ export const HomePage = () => {
               <h3 className="text-2xl font-extrabold text-gray-900">{t('home.no_products')}</h3>
               <p className="text-base text-gray-600">
                 {t('home.try_different')}
-              </p>
-            </div>
+          </p>
+        </div>
             <div className="space-y-3 pt-4">
               <p className="text-sm font-semibold text-gray-700">Попробуйте:</p>
               <div className="flex flex-wrap justify-center gap-2">

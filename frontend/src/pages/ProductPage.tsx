@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { fetchProduct } from '../api/products';
+import { fetchProduct, fetchRecommendations } from '../api/products';
 import { addToCart } from '../api/cart';
 import toast from 'react-hot-toast';
 import { useAuthStore } from '../state/auth';
 import { useSettingsStore } from '../state/settings';
 import { Modal } from '../components/Modal';
+import { ProductCard } from '../components/ProductCard';
 import i18n from '../i18n';
 
 export const ProductPage = () => {
@@ -42,6 +43,12 @@ export const ProductPage = () => {
     queryKey: ['product', id, currency, language],
     queryFn: () => fetchProduct(id!, currency, language),
     enabled: !!id,
+  });
+
+  const { data: recommendations, isLoading: isLoadingRecommendations } = useQuery({
+    queryKey: ['product-recommendations', id, currency, language],
+    queryFn: () => fetchRecommendations(id!, currency, language),
+    enabled: !!id && !!data,
   });
 
   const addMutation = useMutation({
@@ -218,18 +225,18 @@ export const ProductPage = () => {
         <span className="text-gray-900 font-semibold truncate">{data.title.slice(0, 50)}...</span>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-8">
         {/* Image Gallery */}
-        <div className="space-y-4">
+        <div className="space-y-3 lg:space-y-4">
           {/* Main Image */}
           <div 
-            className="relative aspect-square rounded-3xl overflow-hidden shadow-2xl bg-gradient-to-br from-gray-100 to-gray-50 ring-2 ring-gray-200 cursor-zoom-in"
+            className="relative aspect-square rounded-xl lg:rounded-3xl overflow-hidden shadow-xl lg:shadow-2xl bg-gradient-to-br from-gray-100 to-gray-50 ring-2 ring-gray-200 cursor-zoom-in max-w-full"
             onClick={() => setIsZoomed(true)}
           >
             <img 
               src={data.images?.[selectedImage] || data.images?.[0]} 
               alt={data.title} 
-              className="w-full h-full object-cover transition-transform duration-300 hover:scale-105" 
+              className="w-full h-full object-contain lg:object-cover transition-transform duration-300 hover:scale-105" 
             />
             {!data.mock && (
               <div className="absolute top-4 left-4 px-3 py-1.5 bg-green-500/90 backdrop-blur-sm text-white text-xs font-bold rounded-lg shadow-lg flex items-center gap-1.5">
@@ -247,15 +254,15 @@ export const ProductPage = () => {
 
           {/* Thumbnails */}
           {data.images && data.images.length > 1 && (
-            <div className="grid grid-cols-5 gap-3">
+            <div className="grid grid-cols-4 sm:grid-cols-5 gap-2 lg:gap-3">
               {data.images.map((img, idx) => (
                 <button
                   key={img}
                   onClick={() => setSelectedImage(idx)}
-                  className={`aspect-square rounded-xl overflow-hidden transition-all cursor-pointer ${
+                  className={`aspect-square rounded-lg lg:rounded-xl overflow-hidden transition-all cursor-pointer ${
                     selectedImage === idx
-                      ? 'ring-3 ring-primary-500 shadow-lg scale-105'
-                      : 'ring-2 ring-gray-200 hover:ring-primary-300 hover:shadow-md'
+                      ? 'ring-2 lg:ring-3 ring-primary-500 shadow-lg scale-105'
+                      : 'ring-1 lg:ring-2 ring-gray-200 hover:ring-primary-300 hover:shadow-md'
                   }`}
                 >
                   <img src={img} className="w-full h-full object-cover" alt={`${data.title} ${idx + 1}`} />
@@ -265,35 +272,35 @@ export const ProductPage = () => {
           )}
         </div>
       
-      <div className="space-y-6">
-        <div className="flex items-center gap-2 flex-wrap">
+        <div className="space-y-4 lg:space-y-6">
+        <div className="flex items-center gap-1.5 lg:gap-2 flex-wrap">
           {data.mock && (
-            <span className="px-3 py-1.5 bg-primary-100 text-primary-700 rounded-lg text-xs font-bold border border-primary-200">
+            <span className="px-2 lg:px-3 py-1 lg:py-1.5 bg-primary-100 text-primary-700 rounded-md lg:rounded-lg text-[10px] lg:text-xs font-bold border border-primary-200">
               Mock
             </span>
           )}
-          <span className="px-3 py-1.5 bg-blue-100 text-blue-700 rounded-lg text-xs font-bold border border-blue-200">
+          <span className="px-2 lg:px-3 py-1 lg:py-1.5 bg-blue-100 text-blue-700 rounded-md lg:rounded-lg text-[10px] lg:text-xs font-bold border border-blue-200">
             Taobao
           </span>
           {data.rating && (
-            <span className="px-3 py-1.5 bg-gradient-to-r from-yellow-100 to-amber-100 text-yellow-700 rounded-lg text-xs font-bold border border-yellow-200 flex items-center gap-1">
+            <span className="px-2 lg:px-3 py-1 lg:py-1.5 bg-gradient-to-r from-yellow-100 to-amber-100 text-yellow-700 rounded-md lg:rounded-lg text-[10px] lg:text-xs font-bold border border-yellow-200 flex items-center gap-1">
               <span>⭐</span>
               <span>{data.rating.toFixed(1)}</span>
             </span>
           )}
           {data.sales && (
-            <span className="px-3 py-1.5 bg-gradient-to-r from-emerald-100 to-green-100 text-emerald-700 rounded-lg text-xs font-bold border border-emerald-200">
+            <span className="px-2 lg:px-3 py-1 lg:py-1.5 bg-gradient-to-r from-emerald-100 to-green-100 text-emerald-700 rounded-md lg:rounded-lg text-[10px] lg:text-xs font-bold border border-emerald-200">
               🔥 {data.sales} продаж
             </span>
           )}
           {data.inventory !== undefined && (
-            <span className="px-3 py-1.5 bg-gradient-to-r from-purple-100 to-indigo-100 text-purple-700 rounded-lg text-xs font-bold border border-purple-200">
+            <span className="px-2 lg:px-3 py-1 lg:py-1.5 bg-gradient-to-r from-purple-100 to-indigo-100 text-purple-700 rounded-md lg:rounded-lg text-[10px] lg:text-xs font-bold border border-purple-200">
               📦 {data.inventory} в наличии
             </span>
           )}
         </div>
         
-        <h1 className="text-3xl lg:text-4xl font-extrabold leading-tight text-gray-900">
+        <h1 className="text-xl sm:text-2xl lg:text-3xl xl:text-4xl font-extrabold leading-tight text-gray-900 break-words">
           {data.title}
         </h1>
 
@@ -503,7 +510,7 @@ export const ProductPage = () => {
               )}
               {data.description ? (
                 <div 
-                  className="prose max-w-none text-gray-700 lg:prose-lg prose-img:mx-auto prose-a:text-primary-600"
+                  className="prose prose-sm sm:prose-base lg:prose-lg max-w-none text-gray-700 prose-img:mx-auto prose-img:max-w-full prose-img:h-auto prose-a:text-primary-600 break-words overflow-wrap-anywhere"
                   dangerouslySetInnerHTML={{ __html: data.description }}
                 />
               ) : (
@@ -890,6 +897,41 @@ export const ProductPage = () => {
           )}
         </div>
       </Modal>
+
+      {/* Recommended Products Section */}
+      {recommendations && recommendations.length > 0 && (
+        <div className="space-y-6 mt-12">
+          <div className="flex items-center gap-3">
+            <h2 className="text-2xl lg:text-3xl font-extrabold text-gray-900 flex items-center gap-3">
+              <span className="text-3xl">✨</span>
+              <span>Похожие товары</span>
+            </h2>
+          </div>
+          
+          {isLoadingRecommendations ? (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <div
+                  key={i}
+                  className="h-72 rounded-2xl border-2 border-gray-200 bg-gradient-to-br from-gray-100 via-gray-50 to-white animate-pulse shadow-md"
+                >
+                  <div className="h-48 bg-gray-200 rounded-t-2xl" />
+                  <div className="p-4 space-y-3">
+                    <div className="h-4 bg-gray-200 rounded" />
+                    <div className="h-4 bg-gray-200 rounded w-2/3" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+              {recommendations.slice(0, 10).map((product) => (
+                <ProductCard key={product.id} product={product} />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </div>
     </div>
   );

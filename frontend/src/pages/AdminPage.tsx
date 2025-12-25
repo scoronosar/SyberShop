@@ -226,17 +226,17 @@ export const AdminPage = () => {
               <p className="text-sm">Заказы не найдены</p>
             </div>
           ) : (
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="bg-gradient-to-r from-gray-100 to-gray-50 border-b-2 border-gray-300">
-                  <th className="text-left px-4 py-3 font-bold text-gray-700">ID заказа</th>
-                  <th className="text-left px-4 py-3 font-bold text-gray-700">Статус</th>
-                  <th className="text-left px-4 py-3 font-bold text-gray-700">Сумма</th>
-                  <th className="text-left px-4 py-3 font-bold text-gray-700">Доставка</th>
-                  <th className="text-left px-4 py-3 font-bold text-gray-700">Дата создания</th>
-                </tr>
-              </thead>
-              <tbody>
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="bg-gradient-to-r from-gray-100 to-gray-50 border-b-2 border-gray-300">
+                <th className="text-left px-4 py-3 font-bold text-gray-700">ID заказа</th>
+                <th className="text-left px-4 py-3 font-bold text-gray-700">Статус</th>
+                <th className="text-left px-4 py-3 font-bold text-gray-700">Сумма</th>
+                <th className="text-left px-4 py-3 font-bold text-gray-700">Доставка</th>
+                <th className="text-left px-4 py-3 font-bold text-gray-700">Дата создания</th>
+              </tr>
+            </thead>
+            <tbody>
                 {data.map((order: any, idx: number) => (
                 <tr key={order.id} className={`border-t hover:bg-primary-50/50 transition-colors ${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}`}>
                   <td className="px-4 py-3 font-mono text-xs text-gray-900 font-semibold">{order.id}</td>
@@ -255,9 +255,9 @@ export const AdminPage = () => {
                     {new Date(order.createdAt).toLocaleString()}
                   </td>
                 </tr>
-                ))}
-              </tbody>
-            </table>
+              ))}
+            </tbody>
+          </table>
           )}
         </div>
       </div>
@@ -563,13 +563,13 @@ export const AdminPage = () => {
                 >
                   🔄 Обновить статус
                 </button>
-                <button
-                  onClick={() => refreshTokenMutation.mutate()}
-                  disabled={refreshTokenMutation.isPending}
+              <button
+                onClick={() => refreshTokenMutation.mutate()}
+                disabled={refreshTokenMutation.isPending}
                   className="btn-secondary flex-1"
-                >
-                  {refreshTokenMutation.isPending ? '⏳ Обновляем...' : '🔄 Обновить токен'}
-                </button>
+              >
+                {refreshTokenMutation.isPending ? '⏳ Обновляем...' : '🔄 Обновить токен'}
+              </button>
               </div>
             </div>
           ) : (

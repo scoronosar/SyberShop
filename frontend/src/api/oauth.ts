@@ -1,6 +1,6 @@
 import { api } from '../lib/api';
 
-const API_URL = '/api/oauth';
+const API_URL = '/oauth';
 
 export const getOAuthStatus = async () => {
   const response = await api.get(`${API_URL}/status`);

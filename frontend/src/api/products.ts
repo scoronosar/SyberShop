@@ -43,3 +43,8 @@ export const fetchProduct = async (id: string, currency?: string, language?: str
   return res.data;
 };
 
+export const fetchRecommendations = async (id: string, currency?: string, language?: string) => {
+  const res = await api.get<Product[]>(`/products/${id}/recommendations`, { params: { currency, language } });
+  return res.data;
+};
+

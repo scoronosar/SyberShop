@@ -128,15 +128,15 @@ export class TaobaoService {
         const imageUrl = multiLang?.main_image_url || item.main_image_url || 'https://picsum.photos/400/400';
         
         return {
-          id: item.item_id?.toString() || `tw-${Date.now()}-${Math.random()}`,
+        id: item.item_id?.toString() || `tw-${Date.now()}-${Math.random()}`,
           title,
           price_cny: priceYuan,
           images: [imageUrl],
-          rating: 4.5,
-          sales: item.inventory || 0,
+        rating: 4.5,
+        sales: item.inventory || 0,
           coupon_price_cny: item.coupon_price ? toFen(item.coupon_price) : null,
           multi_language_info: multiLang || null,
-          mock: false,
+        mock: false,
         };
       });
     } catch (error) {
@@ -394,6 +394,83 @@ export class TaobaoService {
     } catch (error) {
       this.logger.error(`Failed to get TaoWorld Traffic item: ${error.message}`);
       return this.getMockProductDetails(itemId);
+    }
+  }
+
+  /**
+   * Get recommended similar products for a given product ID
+   */
+  async getRecommendedProducts(itemId: string, language?: string) {
+    if (this.mode === 'MOCK') {
+      return this.getMockProducts('');
+    }
+
+    const accessToken = await this.oauthService.getValidAccessToken();
+    if (!accessToken) {
+      this.logger.warn('No valid TaoWorld OAuth token for recommendations, using mock data');
+      return this.getMockProducts('');
+    }
+
+    try {
+      const timestamp = Date.now().toString();
+      const apiPath = '/product/recommend';
+      
+      const params: Record<string, any> = {
+        app_key: this.appKey,
+        timestamp,
+        sign_method: 'sha256',
+        access_token: accessToken,
+        itemId,
+      };
+
+      // Add language parameter if provided
+      if (language && ['en', 'vi', 'ru', 'ko', 'ja'].includes(language)) {
+        params.language = language;
+      }
+
+      params.sign = this.generateSign(apiPath, params);
+
+      this.logger.log(`Calling TaoWorld Recommend API: ${apiPath} for itemId=${itemId}`);
+      
+      const response = await firstValueFrom(
+        this.http.get(`${this.apiUrl}${apiPath}`, { params, timeout: 10000 }),
+      );
+
+      if (response.data?.error_code && response.data.error_code !== '0') {
+        this.logger.warn(`TaoWorld Recommend API error: ${response.data.error_msg}`);
+        return [];
+      }
+
+      const items = response.data?.data || [];
+      this.logger.log(`✓ Got ${items.length} recommended products for itemId=${itemId}`);
+
+      const toFen = (val: any) => {
+        if (val == null) return 0;
+        const str = val.toString();
+        const n = Number.parseFloat(str);
+        return Number.isFinite(n) ? n : 0;
+      };
+
+      return items.map((item: any) => {
+        const priceYuan = toFen(item.price || '0');
+        const multiLang = item.multi_language_info;
+        const title = multiLang?.title || item.title || 'Taobao Product';
+        const imageUrl = item.pic_urls?.[0] || item.pic_url || 'https://picsum.photos/400/400';
+
+        return {
+          id: item.item_id?.toString() || `tw-${Date.now()}-${Math.random()}`,
+          title,
+          price_cny: priceYuan,
+          images: Array.isArray(item.pic_urls) ? item.pic_urls : [imageUrl],
+          rating: 4.5,
+          sales: item.inventory || 0,
+          multi_language_info: multiLang || null,
+          mock: false,
+        };
+      });
+    } catch (error: any) {
+      this.logger.error(`Failed to get recommended products: ${error.message}`, error.stack);
+      return [];
     }
   }
 

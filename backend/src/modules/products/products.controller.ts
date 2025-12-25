@@ -35,5 +35,11 @@ export class ProductsController {
     const product = await this.products.findOne(id, currency, language);
     return product ?? { message: 'Product not found', mock: true };
   }
+
+  @Get(':id/recommendations')
+  async recommendations(@Param('id') id: string, @Query('currency') currency?: string, @Query('language') language?: string) {
+    const recommendations = await this.products.getRecommendations(id, currency, language);
+    return recommendations;
+  }
 }
 
