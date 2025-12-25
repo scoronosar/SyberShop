@@ -327,21 +327,40 @@ export class TaobaoService {
 
       params.sign = this.generateSign(apiPath, params);
 
-      this.logger.log(`Calling TaoWorld Traffic item.get for ${itemId}`);
+      this.logger.log(`Calling TaoWorld Traffic item.get for ${itemId} with language=${language || 'none'}`);
       const response = await firstValueFrom(
         this.http.get(`${this.apiUrl}${apiPath}`, { params, timeout: 10000 }),
       );
 
-      if (response.data?.biz_error_code || (response.data?.code && response.data.code !== '0')) {
-        this.logger.warn(`TaoWorld Traffic item error: ${JSON.stringify(response.data)}`);
-        return this.getMockProductDetails(itemId);
+      this.logger.debug(`TaoWorld Traffic item.get response for ${itemId}:`, JSON.stringify({
+        code: response.data?.code,
+        biz_error_code: response.data?.biz_error_code,
+        biz_error_msg: response.data?.biz_error_msg,
+        has_data: !!response.data?.data,
+        data_keys: response.data?.data ? Object.keys(response.data.data) : [],
+      }));
+
+      if (response.data?.biz_error_code) {
+        this.logger.warn(`TaoWorld Traffic item biz_error: ${response.data.biz_error_code} - ${response.data.biz_error_msg || 'Unknown error'}`);
+        // Don't return mock for business errors - return null so frontend can handle it
+        return null;
+      }
+
+      if (response.data?.code && response.data.code !== '0') {
+        this.logger.warn(`TaoWorld Traffic item error code: ${response.data.code}, message: ${response.data.error_msg || 'Unknown'}`);
+        return null;
       }
 
       const item = response.data?.data;
       
       if (!item) {
-        this.logger.log('No item data in response, using mock');
-        return this.getMockProductDetails(itemId);
+        this.logger.warn(`No item data in response for ${itemId}, response structure:`, JSON.stringify(response.data));
+        return null;
+      }
+
+      if (!item.item_id && !itemId) {
+        this.logger.warn(`Item ${itemId} has no item_id in response`);
+        return null;
       }
 
       this.logger.log(`✓ Successfully fetched REAL Taobao item ${itemId} with full details`);

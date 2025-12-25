@@ -32,6 +32,7 @@ export const HomePage = () => {
   const language = useSettingsStore((s) => s.language);
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [refreshKey, setRefreshKey] = useState(0);
+  const [showCategories, setShowCategories] = useState(false);
   const queryClient = useQueryClient();
   const loadMoreRef = useRef<HTMLDivElement>(null);
   
@@ -133,12 +134,12 @@ export const HomePage = () => {
 
   return (
     <div className="space-y-8">
-      {/* Hero Section */}
+      {/* Hero Section - Hidden on mobile */}
       <motion.div
         initial={{ opacity: 0, translateY: 10 }}
         animate={{ opacity: 1, translateY: 0 }}
         transition={{ duration: 0.4 }}
-        className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-primary-600 via-primary-500 to-amber-500 text-white shadow-2xl"
+        className="hidden md:block relative overflow-hidden rounded-3xl bg-gradient-to-br from-primary-600 via-primary-500 to-amber-500 text-white shadow-2xl"
       >
         {/* Animated background elements */}
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(255,255,255,0.3),transparent_30%),radial-gradient(circle_at_80%_80%,rgba(255,255,255,0.25),transparent_25%)]" />
@@ -152,7 +153,7 @@ export const HomePage = () => {
                 <span className="text-sm font-semibold tracking-wide">SyberShop × Taobao Global</span>
               </div>
               
-              <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold leading-tight hidden md:block">
+              <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold leading-tight">
                 Миллионы товаров<br />
                 <span className="bg-gradient-to-r from-amber-200 to-yellow-200 bg-clip-text text-transparent">
                   из Китая
@@ -247,21 +248,30 @@ export const HomePage = () => {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.5, delay: 0.2 }}
-        className="card p-8 bg-gradient-to-br from-white to-gray-50"
+        className="card p-4 sm:p-8 bg-gradient-to-br from-white to-gray-50"
       >
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-2xl font-extrabold text-gray-900 flex items-center gap-3">
-            <span className="text-3xl">🏷️</span>
+        <div className="flex items-center justify-between mb-4 sm:mb-6">
+          <h2 className="text-xl sm:text-2xl font-extrabold text-gray-900 flex items-center gap-2 sm:gap-3">
+            <span className="text-2xl sm:text-3xl">🏷️</span>
             <span>Популярные категории</span>
         </h2>
-          <div className="hidden sm:flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-primary-100 to-amber-100 border border-primary-200">
-            <span className="text-sm font-semibold text-primary-700">
-              {allProducts.length} товаров
-            </span>
+          <div className="flex items-center gap-2">
+            <div className="hidden sm:flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-primary-100 to-amber-100 border border-primary-200">
+              <span className="text-sm font-semibold text-primary-700">
+                {allProducts.length} товаров
+              </span>
+            </div>
+            {/* Mobile toggle button */}
+            <button
+              onClick={() => setShowCategories(!showCategories)}
+              className="sm:hidden px-3 py-2 rounded-xl bg-gradient-to-r from-primary-500 to-primary-600 text-white font-bold text-sm shadow-lg hover:shadow-xl transition-all"
+            >
+              {showCategories ? '✕ Скрыть' : '☰ Категории'}
+            </button>
           </div>
         </div>
         
-        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-9 gap-3">
+        <div className={`grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-9 gap-2 sm:gap-3 ${showCategories ? '' : 'hidden sm:grid'}`}>
           {CATEGORIES.map((category, idx) => (
             <motion.button
               key={category.id}

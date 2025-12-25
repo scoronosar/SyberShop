@@ -120,7 +120,17 @@ export class ProductsService {
       const apiLanguage = language && languageMap[language] ? languageMap[language] : undefined;
       
       const item = await this.taobao.getProductDetails(id, apiLanguage);
-      if (!item) return null;
+      if (!item) {
+        console.error(`Product ${id} not found or API returned null`);
+        return null;
+      }
+      
+      // Log if we got mock data
+      if (item.mock) {
+        console.warn(`Product ${id} returned as mock data - check OAuth token and API connection`);
+      } else {
+        console.log(`Product ${id} fetched successfully from Taobao API`);
+      }
       
       try {
         return await this.enrichProduct(item, currency);
