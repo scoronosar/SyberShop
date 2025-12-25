@@ -159,7 +159,9 @@ export const ProductPage = () => {
   };
 
   // Taobao SKU helpers (см. documentation2.txt: sku_list.quantity, pic_url, mp_sku_id/mp_skuId, price/promotion_price/coupon_price в "фенах")
-  const pricingMultiplier = data.price_cny > 0 ? data.final_item_price / data.price_cny : 0;
+  const pricingMultiplier = (data?.price_cny && data.price_cny > 0 && data?.final_item_price) 
+    ? data.final_item_price / data.price_cny 
+    : 0;
 
   const getSkuQuantity = (sku: any) => Number.parseInt(sku?.quantity ?? sku?.inventory ?? '0', 10) || 0;
   const getSkuImage = (sku: any) => sku?.pic_url || sku?.images?.[0] || null;
@@ -170,7 +172,8 @@ export const ProductPage = () => {
   };
   const getSkuFinalPrice = (sku: any) => {
     const cny = getSkuPriceCny(sku);
-    if (!pricingMultiplier) return data.final_item_price;
+    const finalPrice = data?.final_item_price || 0;
+    if (!pricingMultiplier) return finalPrice;
     return cny * pricingMultiplier;
   };
 
@@ -285,7 +288,7 @@ export const ProductPage = () => {
           {data.rating && (
             <span className="px-2 lg:px-3 py-1 lg:py-1.5 bg-gradient-to-r from-yellow-100 to-amber-100 text-yellow-700 rounded-md lg:rounded-lg text-[10px] lg:text-xs font-bold border border-yellow-200 flex items-center gap-1">
               <span>⭐</span>
-              <span>{data.rating.toFixed(1)}</span>
+              <span>{(data.rating || 0).toFixed(1)}</span>
             </span>
           )}
           {data.sales && (
@@ -331,11 +334,11 @@ export const ProductPage = () => {
         <div className="card p-6 space-y-4 bg-gradient-to-br from-white to-orange-50/30">
           <div className="flex items-baseline justify-between">
             <div className="text-4xl font-extrabold bg-gradient-to-r from-primary-600 to-primary-500 bg-clip-text text-transparent">
-              {(selectedSku ? getSkuFinalPrice(selectedSku) : data.final_item_price).toFixed(2)} {currencySymbol}
+              {((selectedSku ? getSkuFinalPrice(selectedSku) : (data?.final_item_price || 0)) || 0).toFixed(2)} {currencySymbol}
             </div>
             {role === 'admin' && (
               <span className="text-base text-gray-500 font-semibold">
-                ({(selectedSku ? getSkuPriceCny(selectedSku) : data.price_cny).toFixed(2)} ¥)
+                ({((selectedSku ? getSkuPriceCny(selectedSku) : (data?.price_cny || 0)) || 0).toFixed(2)} ¥)
               </span>
             )}
           </div>
@@ -354,13 +357,13 @@ export const ProductPage = () => {
                   <div className="p-4 bg-orange-50 rounded-xl border-2 border-orange-200">
                     <div className="font-bold text-orange-700 mb-1">Курс + наценка</div>
                     <div className="text-lg font-semibold text-orange-900">
-                      {data.converted_with_markup.toFixed(2)} {currencySymbol}
+                      {(data?.converted_with_markup || 0).toFixed(2)} {currencySymbol}
                     </div>
                   </div>
                   <div className="p-4 bg-slate-50 rounded-xl border-2 border-slate-200">
                     <div className="font-bold text-slate-700 mb-1">Сервисный сбор</div>
                     <div className="text-lg font-semibold text-slate-900">
-                      {data.service_fee_amount.toFixed(2)} {currencySymbol}
+                      {(data?.service_fee_amount || 0).toFixed(2)} {currencySymbol}
                     </div>
                   </div>
                   <div className="col-span-2 text-xs text-gray-600 bg-white/50 p-3 rounded-lg">
@@ -660,19 +663,19 @@ export const ProductPage = () => {
             <div className="p-4 bg-gradient-to-br from-blue-50 to-cyan-50 rounded-xl border border-blue-200">
               <div className="text-sm text-gray-600 mb-1">Курс + наценка</div>
               <div className="text-xl font-bold text-gray-900">
-                {data.converted_with_markup.toFixed(2)} {currencySymbol}
+                {(data?.converted_with_markup || 0).toFixed(2)} {currencySymbol}
               </div>
             </div>
             <div className="p-4 bg-gradient-to-br from-purple-50 to-pink-50 rounded-xl border border-purple-200">
               <div className="text-sm text-gray-600 mb-1">Сервисный сбор</div>
               <div className="text-xl font-bold text-gray-900">
-                {data.service_fee_amount.toFixed(2)} {currencySymbol}
+                {(data?.service_fee_amount || 0).toFixed(2)} {currencySymbol}
               </div>
             </div>
             <div className="p-4 bg-gradient-to-br from-primary-100 to-amber-100 rounded-xl border-2 border-primary-300">
               <div className="text-sm text-gray-700 mb-1">Итоговая цена</div>
               <div className="text-3xl font-extrabold bg-gradient-to-r from-primary-600 to-primary-500 bg-clip-text text-transparent">
-                {data.final_item_price.toFixed(2)} {currencySymbol}
+                {(data?.final_item_price || 0).toFixed(2)} {currencySymbol}
               </div>
             </div>
             <div className="text-xs text-gray-600 bg-gray-50 p-3 rounded-lg">
@@ -684,7 +687,7 @@ export const ProductPage = () => {
             <div className="p-6 bg-gradient-to-br from-primary-100 to-amber-100 rounded-xl border-2 border-primary-300 text-center">
               <div className="text-sm text-gray-700 mb-2">Итоговая цена</div>
               <div className="text-4xl font-extrabold bg-gradient-to-r from-primary-600 to-primary-500 bg-clip-text text-transparent">
-                {data.final_item_price.toFixed(2)} {currencySymbol}
+                {(data?.final_item_price || 0).toFixed(2)} {currencySymbol}
               </div>
             </div>
             <div className="p-4 bg-blue-50 rounded-xl border border-blue-200">
@@ -720,7 +723,7 @@ export const ProductPage = () => {
             {/* Price and Stock */}
             <div className="flex-1 space-y-2">
               <div className="text-3xl font-extrabold bg-gradient-to-r from-primary-600 to-primary-500 bg-clip-text text-transparent">
-                {selectedSku ? getSkuFinalPrice(selectedSku).toFixed(2) : data.final_item_price.toFixed(2)} {currencySymbol}
+                {((selectedSku ? getSkuFinalPrice(selectedSku) : (data?.final_item_price || 0)) || 0).toFixed(2)} {currencySymbol}
               </div>
               {selectedSku && (
                 <div className="flex items-center gap-2">
@@ -886,7 +889,7 @@ export const ProductPage = () => {
                           <span className="text-2xl">✓</span>
                           <span>{i18n.t('product.add_to_cart', 'Добавить в корзину')}</span>
                           <span className="text-sm opacity-90">
-                            • {qty} шт. • {(getSkuFinalPrice(selectedSku) * qty).toFixed(2)} {currencySymbol}
+                            • {qty} шт. • {((getSkuFinalPrice(selectedSku) || 0) * qty).toFixed(2)} {currencySymbol}
                           </span>
                         </>
                       )}
