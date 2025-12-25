@@ -118,9 +118,10 @@ export class TaobaoService {
       
       return items.map((item: any) => {
         // Use coupon_price if available (most accurate), otherwise use price
-        // Note: Search API doesn't return sku_list, so we use coupon_price as best approximation
+        // Note: Search API returns prices in "fen" (cents), need to divide by 100 to get yuan
         // The actual cheapest SKU price will be calculated in getProductDetails
-        const priceYuan = toFen(item.coupon_price || item.price || '0');
+        const priceFen = toFen(item.coupon_price || item.price || '0');
+        const priceYuan = priceFen / 100; // Convert from fen to yuan
         
         // Use multi_language_info if available for translated title
         const multiLang = item.multi_language_info;
@@ -134,7 +135,7 @@ export class TaobaoService {
           images: [imageUrl],
         rating: 4.5,
         sales: item.inventory || 0,
-          coupon_price_cny: item.coupon_price ? toFen(item.coupon_price) : null,
+          coupon_price_cny: item.coupon_price ? toFen(item.coupon_price) / 100 : null,
           multi_language_info: multiLang || null,
         mock: false,
         };
@@ -224,7 +225,9 @@ export class TaobaoService {
     
     return limited.map((item: any) => {
       // Use coupon_price if available (most accurate), otherwise use price
-      const priceYuan = toFen(item.coupon_price || item.price || '0');
+      // API returns prices in "fen" (cents), need to divide by 100 to get yuan
+      const priceFen = toFen(item.coupon_price || item.price || '0');
+      const priceYuan = priceFen / 100; // Convert from fen to yuan
       
       // Use multi_language_info if available for translated title
       const multiLang = item.multi_language_info;
@@ -238,7 +241,7 @@ export class TaobaoService {
         images: [imageUrl],
         rating: 4.5,
         sales: item.inventory || 0,
-        coupon_price_cny: item.coupon_price ? toFen(item.coupon_price) : null,
+        coupon_price_cny: item.coupon_price ? toFen(item.coupon_price) / 100 : null,
         multi_language_info: multiLang || null,
         mock: false,
       };
@@ -471,7 +474,10 @@ export class TaobaoService {
       };
 
       return items.map((item: any) => {
-        const priceYuan = toFen(item.price || '0');
+        // API returns prices in "fen" (cents), need to divide by 100 to get yuan
+        const priceFen = toFen(item.price || '0');
+        const priceYuan = priceFen / 100; // Convert from fen to yuan
+        
         const multiLang = item.multi_language_info;
         const title = multiLang?.title || item.title || 'Taobao Product';
         const imageUrl = item.pic_urls?.[0] || item.pic_url || 'https://picsum.photos/400/400';

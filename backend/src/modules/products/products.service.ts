@@ -188,11 +188,15 @@ export class ProductsService {
 
   async enrichProduct(item: ProductData, currency?: string) {
     try {
+      // Clamp price to prevent DB overflow (Decimal(14,2) max value is 99999999999999.99)
+      const maxPrice = 99999999999999.99;
+      const safePriceCny = Math.min(Math.max(item.price_cny || 0, 0), maxPrice);
+      
       // persist minimal product snapshot for cart/order relations
       await this.prisma.product.upsert({
         where: { externalId: item.id },
         update: {
-          priceCny: item.price_cny,
+          priceCny: safePriceCny,
           titleOrig: item.title,
           images: item.images,
           rating: item.rating,
@@ -202,7 +206,7 @@ export class ProductsService {
           externalId: item.id,
           titleOrig: item.title,
           titleEn: item.title,
-          priceCny: item.price_cny,
+          priceCny: safePriceCny,
           images: item.images,
           rating: item.rating,
           sales: item.sales,
