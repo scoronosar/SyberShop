@@ -222,7 +222,7 @@ export const ProductPage = () => {
             <span>›</span>
           </>
         )}
-        <span className="text-gray-900 font-semibold truncate">{data.title.slice(0, 50)}...</span>
+        <span className="text-gray-900 font-semibold truncate">{(data.title || '').slice(0, 50)}...</span>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-8">
@@ -925,7 +925,7 @@ export const ProductPage = () => {
             </div>
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-              {recommendations.slice(0, 10).map((product) => (
+              {(recommendations || []).slice(0, 10).map((product) => (
                 <ProductCard key={product.id} product={product} />
               ))}
             </div>
