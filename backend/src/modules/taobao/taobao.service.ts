@@ -34,10 +34,44 @@ export class TaobaoService {
   }
 
   /**
+   * Translate query using external API (MyMemory Translation API - free, no key required)
+   * Falls back to dictionary if API fails
+   */
+  private async translateQueryViaAPI(query: string, fromLang: string = 'ru', toLang: string = 'en'): Promise<string | null> {
+    try {
+      // MyMemory Translation API - free, no API key required for basic usage
+      // Docs: https://mymemory.translated.net/doc/spec
+      const url = 'https://api.mymemory.translated.net/get';
+      const params = {
+        q: query,
+        langpair: `${fromLang}|${toLang}`,
+      };
+
+      this.logger.log(`Translating "${query}" via API: ${fromLang} -> ${toLang}`);
+      const response = await firstValueFrom(
+        this.http.get(url, { params, timeout: 5000 }),
+      );
+
+      const translatedText = response.data?.responseData?.translatedText;
+      if (translatedText && translatedText !== query) {
+        this.logger.log(`API translation: "${query}" -> "${translatedText}"`);
+        return translatedText.trim();
+      }
+
+      this.logger.warn(`API translation failed or returned same text for: "${query}"`);
+      return null;
+    } catch (error) {
+      this.logger.warn(`Translation API error for "${query}": ${error.message}`);
+      return null;
+    }
+  }
+
+  /**
    * Translate Russian/other language queries to Chinese/English for Taobao API
    * Taobao API keyword parameter only accepts Chinese or English
+   * Uses dictionary first, then falls back to API translation
    */
-  private translateQuery(query: string, language?: string): string {
+  private async translateQuery(query: string, language?: string): Promise<string> {
     // If query is already in Chinese/English characters, return as is
     if (/^[\u4e00-\u9fa5a-zA-Z0-9\s]+$/.test(query)) {
       return query.trim();
@@ -55,6 +89,7 @@ export class TaobaoService {
       'колонки': '音响',
       'камера': '相机',
       'часы': '手表',
+      'наручные часы': '手表',
       'зарядка': '充电器',
       'кабель': '数据线',
       
@@ -74,12 +109,23 @@ export class TaobaoService {
       // Home & Living
       'мебель': '家具',
       'кровать': '床',
+      'постельное белье': 'bedding',
+      'постель': 'bedding',
+      'белье': 'bedding',
+      'простынь': 'bed sheet',
+      'одеяло': 'quilt',
+      'подушка': 'pillow',
+      'наволочка': 'pillowcase',
+      'пододеяльник': 'duvet cover',
       'стол': '桌子',
       'стул': '椅子',
       'лампа': '灯',
       'ковер': '地毯',
       'посуда': '餐具',
       'кухня': '厨房用品',
+      'полотенце': 'towel',
+      'занавески': 'curtains',
+      'шторы': 'curtains',
       
       // Beauty & Health
       'косметика': '化妆品',
@@ -112,13 +158,23 @@ export class TaobaoService {
 
     const lowerQuery = query.toLowerCase().trim();
     
-    // Check for exact match
+    // Check for exact match first
     if (translations[lowerQuery]) {
-      this.logger.log(`Translated "${query}" -> "${translations[lowerQuery]}"`);
+      this.logger.log(`Dictionary translation: "${query}" -> "${translations[lowerQuery]}"`);
       return translations[lowerQuery];
     }
     
-    // Check for partial matches (words in query)
+    // Check for partial matches - try longer phrases first
+    // Sort keys by length (longest first) to match "постельное белье" before "белье"
+    const sortedKeys = Object.keys(translations).sort((a, b) => b.length - a.length);
+    for (const key of sortedKeys) {
+      if (lowerQuery.includes(key)) {
+        this.logger.log(`Dictionary translation (partial): "${query}" -> "${translations[key]}" (matched: "${key}")`);
+        return translations[key];
+      }
+    }
+    
+    // Check for individual words in query
     const words = lowerQuery.split(/\s+/);
     const translatedWords: string[] = [];
     let hasTranslation = false;
@@ -135,12 +191,18 @@ export class TaobaoService {
     
     if (hasTranslation) {
       const translated = translatedWords.join(' ');
-      this.logger.log(`Translated "${query}" -> "${translated}"`);
+      this.logger.log(`Dictionary translation (words): "${query}" -> "${translated}"`);
       return translated;
     }
     
-    // If no translation found and language is Russian, try English fallback
-    // For now, return query as-is and let API handle it (might return empty results)
+    // If no dictionary translation found, try API translation to English
+    // Taobao API supports English keywords
+    const apiTranslation = await this.translateQueryViaAPI(query, 'ru', 'en');
+    if (apiTranslation) {
+      return apiTranslation;
+    }
+    
+    // Last resort: return query as-is (might not work, but better than nothing)
     this.logger.warn(`No translation found for query: "${query}", using as-is (may not work)`);
     return query.trim();
   }
@@ -174,7 +236,7 @@ export class TaobaoService {
       }
 
       // Translate query to Chinese/English if needed (Taobao API only accepts Chinese/English keywords)
-      const translatedQuery = this.translateQuery(query, language);
+      const translatedQuery = await this.translateQuery(query, language);
 
       // TaoWorld Traffic API - /traffic/item/search (requires access_token)
       // Docs: https://open.taobao.global/doc/api.htm#/api?path=/traffic/item/search
@@ -287,7 +349,7 @@ export class TaobaoService {
     const promises = selectedKeywords.map(async (keyword, idx) => {
       try {
         // Translate keyword if needed (though these are already in Chinese)
-        const translatedKeyword = this.translateQuery(keyword, language);
+        const translatedKeyword = await this.translateQuery(keyword, language);
         
         const params: Record<string, any> = {
           app_key: this.appKey,
