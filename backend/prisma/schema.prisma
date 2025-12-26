@@ -83,6 +83,8 @@ model Order {
   deliveryFee Decimal     @db.Decimal(14, 2) @default(0)
   total       Decimal     @db.Decimal(14, 2)
   status      String      @default("pending_processing")
+  purchased   Boolean     @default(false) // Whether the order has been purchased from Taoworld
+  purchasedAt DateTime?   // When the order was purchased
   createdAt   DateTime    @default(now())
   chinaOrder  ChinaOrder? @relation(fields: [chinaOrderId], references: [id])
   chinaOrderId String?

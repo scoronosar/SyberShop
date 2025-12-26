@@ -55,7 +55,7 @@ export const AccountPage = () => {
             to="/settings"
             className="btn-secondary"
           >
-            ⚡ {t('common.settings')}
+            ⚡ {t('account.settings_link') || t('common.settings')}
           </Link>
         </div>
       </div>

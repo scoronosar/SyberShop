@@ -297,29 +297,29 @@ export const HomePage = () => {
               </div>
               
               <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold leading-tight">
-                Миллионы товаров<br />
+                {t('home.title')}<br />
                 <span className="bg-gradient-to-r from-amber-200 to-yellow-200 bg-clip-text text-transparent">
-                  из Китая
+                  {t('home.title').split(' ').slice(-2).join(' ')}
                 </span>
               </h1>
               
               <p className="text-lg sm:text-xl opacity-95 leading-relaxed font-medium">
-                Прямые закупки с Taobao. Выгодные цены с конвертацией валюты.<br />
-                Доставка рассчитывается при прибытии груза на склад.
+                {t('home.subtitle')}<br />
+                {t('home.subtitle_detail')}
               </p>
 
               <div className="flex flex-wrap gap-3">
                 <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/20 backdrop-blur-sm border border-white/30">
                   <span className="text-2xl">🚀</span>
-                  <span className="text-sm font-semibold">Быстрая обработка</span>
+                  <span className="text-sm font-semibold">{t('home.fast_processing')}</span>
                 </div>
                 <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/20 backdrop-blur-sm border border-white/30">
                   <span className="text-2xl">🛡️</span>
-                  <span className="text-sm font-semibold">Защита покупателя</span>
+                  <span className="text-sm font-semibold">{t('home.buyer_protection')}</span>
                 </div>
                 <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/20 backdrop-blur-sm border border-white/30">
                   <span className="text-2xl">💎</span>
-                  <span className="text-sm font-semibold">Проверка качества</span>
+                  <span className="text-sm font-semibold">{t('home.quality_check')}</span>
                 </div>
               </div>
             </div>
@@ -327,11 +327,11 @@ export const HomePage = () => {
             <div className="flex flex-col gap-3">
               {q && (
                 <div className="px-6 py-3 rounded-xl bg-white/30 backdrop-blur-md border border-white/50 text-base font-bold shadow-xl">
-                  🔍 Поиск: {q}
+                  🔍 {t('home.search_label')}: {q}
                 </div>
               )}
               <div className="px-6 py-3 rounded-xl bg-white/30 backdrop-blur-md border border-white/50 text-base font-bold shadow-xl">
-                💰 Валюта: {currency}
+                💰 {t('home.currency_label')}: {currency}
               </div>
             </div>
           </div>
@@ -355,8 +355,8 @@ export const HomePage = () => {
               <span className="text-2xl">🌏</span>
             </div>
             <div>
-              <h3 className="font-bold text-gray-900 mb-1">Глобальная доставка</h3>
-              <p className="text-sm text-gray-600">Отправляем в любую точку мира через проверенные службы доставки</p>
+              <h3 className="font-bold text-gray-900 mb-1">{t('home.global_delivery')}</h3>
+              <p className="text-sm text-gray-600">{t('home.global_delivery_desc')}</p>
             </div>
           </div>
         </div>
@@ -367,8 +367,8 @@ export const HomePage = () => {
               <span className="text-2xl">💳</span>
             </div>
             <div>
-              <h3 className="font-bold text-gray-900 mb-1">Удобная оплата</h3>
-              <p className="text-sm text-gray-600">Оплата товара сейчас, доставка - при прибытии груза</p>
+              <h3 className="font-bold text-gray-900 mb-1">{t('home.convenient_payment')}</h3>
+              <p className="text-sm text-gray-600">{t('home.convenient_payment_desc')}</p>
             </div>
           </div>
         </div>
@@ -379,8 +379,8 @@ export const HomePage = () => {
               <span className="text-2xl">📦</span>
             </div>
             <div>
-              <h3 className="font-bold text-gray-900 mb-1">Отслеживание груза</h3>
-              <p className="text-sm text-gray-600">Полный трекинг от закупки до получения на складе</p>
+              <h3 className="font-bold text-gray-900 mb-1">{t('home.cargo_tracking')}</h3>
+              <p className="text-sm text-gray-600">{t('home.cargo_tracking_desc')}</p>
             </div>
           </div>
         </div>
@@ -396,12 +396,12 @@ export const HomePage = () => {
         <div className="flex items-center justify-between mb-4 sm:mb-6">
           <h2 className="text-xl sm:text-2xl font-extrabold text-gray-900 flex items-center gap-2 sm:gap-3">
             <span className="text-2xl sm:text-3xl">🏷️</span>
-            <span>Популярные категории</span>
+            <span>{t('home.categories')}</span>
         </h2>
           <div className="flex items-center gap-2">
             <div className="hidden sm:flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-primary-100 to-amber-100 border border-primary-200">
               <span className="text-sm font-semibold text-primary-700">
-                {allProducts.length} товаров
+                {allProducts.length} {t('home.products_count')}
               </span>
             </div>
             {/* Mobile toggle button */}
@@ -473,12 +473,12 @@ export const HomePage = () => {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
             </svg>
             </div>
-            <span>Фильтры и сортировка</span>
+            <span>{t('home.filters')}</span>
           </div>
           <div className="flex items-center gap-2">
             {(sort || priceMin || priceMax || availability) && (
               <span className="px-3 py-1 rounded-lg bg-primary-100 text-primary-700 text-xs font-bold border border-primary-200">
-                Активны
+                {t('common.active') || 'Активны'}
               </span>
             )}
             <span className="text-sm text-gray-500 group-open:rotate-180 transition-transform duration-300">▼</span>
@@ -489,31 +489,31 @@ export const HomePage = () => {
           <div className="space-y-3">
             <label className="text-sm font-bold text-gray-800 mb-2 flex items-center gap-2">
               <span className="text-lg">📊</span>
-              <span>Сортировка</span>
+              <span>{t('home.sort')}</span>
             </label>
             <select
               value={sort}
               onChange={(e) => updateParam('sort', e.target.value)}
               className="input-field text-sm font-medium bg-white border-2 border-gray-200 focus:border-primary-400 focus:ring-4 focus:ring-primary-100"
             >
-              <option value="">🎯 По релевантности</option>
-              <option value="price_asc">💰 Цена: сначала дешевле</option>
-              <option value="price_desc">💎 Цена: сначала дороже</option>
-              <option value="rating_desc">⭐ По рейтингу</option>
-              <option value="sales_desc">🔥 По популярности</option>
+              <option value="">🎯 {t('home.sort_relevance')}</option>
+              <option value="price_asc">💰 {t('home.sort_price_asc')}</option>
+              <option value="price_desc">💎 {t('home.sort_price_desc')}</option>
+              <option value="rating_desc">⭐ {t('home.sort_rating')}</option>
+              <option value="sales_desc">🔥 {t('home.sort_popularity')}</option>
             </select>
           </div>
           
           <div className="space-y-3">
             <label className="text-sm font-bold text-gray-800 mb-2 flex items-center gap-2">
               <span className="text-lg">💵</span>
-              <span>Диапазон цен</span>
+              <span>{t('home.price_range')}</span>
             </label>
             <div className="flex gap-3">
               <div className="flex-1">
               <input
                   className="input-field text-sm font-medium bg-white border-2 border-gray-200 focus:border-primary-400 focus:ring-4 focus:ring-primary-100"
-                  placeholder="Мин."
+                  placeholder={t('home.price_min')}
                 value={priceMin}
                 onChange={(e) => updateParam('price_min', e.target.value)}
                 inputMode="numeric"
@@ -523,7 +523,7 @@ export const HomePage = () => {
               <div className="flex-1">
               <input
                   className="input-field text-sm font-medium bg-white border-2 border-gray-200 focus:border-primary-400 focus:ring-4 focus:ring-primary-100"
-                  placeholder="Макс."
+                  placeholder={t('home.price_max')}
                 value={priceMax}
                 onChange={(e) => updateParam('price_max', e.target.value)}
                 inputMode="numeric"
@@ -535,15 +535,15 @@ export const HomePage = () => {
           <div className="space-y-3">
             <label className="text-sm font-bold text-gray-800 mb-2 flex items-center gap-2">
               <span className="text-lg">📦</span>
-              <span>Наличие товара</span>
+              <span>{t('home.availability')}</span>
             </label>
             <select
               value={availability}
               onChange={(e) => updateParam('availability', e.target.value)}
               className="input-field text-sm font-medium bg-white border-2 border-gray-200 focus:border-primary-400 focus:ring-4 focus:ring-primary-100"
             >
-              <option value="">Все товары</option>
-              <option value="in_stock">✅ Только в наличии</option>
+              <option value="">{t('home.all_products')}</option>
+              <option value="in_stock">✅ {t('home.in_stock_only')}</option>
             </select>
           </div>
         </div>
@@ -551,13 +551,13 @@ export const HomePage = () => {
         {/* Active filters indicator */}
         {(sort || priceMin || priceMax || availability) && (
           <div className="mt-6 pt-6 border-t border-gray-200">
-            <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between">
               <div className="flex items-center gap-2 text-sm text-gray-600">
-                <span className="font-semibold">Активные фильтры:</span>
+                <span className="font-semibold">{t('home.active_filters')}</span>
                 <div className="flex flex-wrap gap-2">
-                  {sort && <span className="px-2 py-1 bg-primary-100 text-primary-700 rounded-lg text-xs font-bold">Сортировка</span>}
-                  {(priceMin || priceMax) && <span className="px-2 py-1 bg-primary-100 text-primary-700 rounded-lg text-xs font-bold">Цена</span>}
-                  {availability && <span className="px-2 py-1 bg-primary-100 text-primary-700 rounded-lg text-xs font-bold">В наличии</span>}
+                  {sort && <span className="px-2 py-1 bg-primary-100 text-primary-700 rounded-lg text-xs font-bold">{t('home.filter_sort')}</span>}
+                  {(priceMin || priceMax) && <span className="px-2 py-1 bg-primary-100 text-primary-700 rounded-lg text-xs font-bold">{t('home.filter_price')}</span>}
+                  {availability && <span className="px-2 py-1 bg-primary-100 text-primary-700 rounded-lg text-xs font-bold">{t('home.filter_stock')}</span>}
                 </div>
               </div>
               <button
@@ -568,7 +568,7 @@ export const HomePage = () => {
                 className="text-sm font-bold text-red-600 hover:text-red-700 hover:underline flex items-center gap-1"
               >
                 <span>✕</span>
-                <span>Сбросить все</span>
+                <span>{t('home.reset_all')}</span>
               </button>
             </div>
           </div>
@@ -683,7 +683,7 @@ export const HomePage = () => {
           </p>
         </div>
             <div className="space-y-3 pt-4">
-              <p className="text-sm font-semibold text-gray-700">Попробуйте:</p>
+              <p className="text-sm font-semibold text-gray-700">{t('home.try_suggestions')}</p>
               <div className="flex flex-wrap justify-center gap-2">
                 <button
                   onClick={() => {
@@ -692,19 +692,19 @@ export const HomePage = () => {
                   }}
                   className="px-4 py-2 rounded-xl bg-gradient-to-r from-primary-500 to-primary-600 text-white font-bold text-sm shadow-lg hover:shadow-xl transition-all hover:scale-105"
                 >
-                  🏠 Сбросить фильтры
+                  🏠 {t('home.reset_filters')}
                 </button>
                 <button
                   onClick={() => handleCategoryClick(CATEGORIES[1])}
                   className="px-4 py-2 rounded-xl bg-white border-2 border-gray-300 text-gray-700 font-bold text-sm hover:border-primary-400 hover:shadow-md transition-all"
                 >
-                  📱 Электроника
+                  📱 {t('home.try_electronics')}
                 </button>
                 <button
                   onClick={() => handleCategoryClick(CATEGORIES[2])}
                   className="px-4 py-2 rounded-xl bg-white border-2 border-gray-300 text-gray-700 font-bold text-sm hover:border-primary-400 hover:shadow-md transition-all"
                 >
-                  👗 Женская мода
+                  👗 {t('home.try_fashion')}
                 </button>
               </div>
             </div>

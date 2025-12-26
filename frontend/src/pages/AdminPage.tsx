@@ -13,10 +13,24 @@ import { useTranslation } from 'react-i18next';
 export const AdminPage = () => {
   const { t } = useTranslation();
   const { data, isLoading, isError: isOrdersError, error: ordersError } = useQuery({
-    queryKey: ['admin-orders'],
+    queryKey: ['admin-orders', statusFilter, purchasedFilter],
     queryFn: async () => {
       const res = await api.get('/admin/orders');
-      return res.data as any[];
+      let orders = res.data as any[];
+      
+      // Apply status filter
+      if (statusFilter !== 'all') {
+        orders = orders.filter((o) => o.status === statusFilter);
+      }
+      
+      // Apply purchased filter
+      if (purchasedFilter === 'purchased') {
+        orders = orders.filter((o) => o.purchased === true);
+      } else if (purchasedFilter === 'not_purchased') {
+        orders = orders.filter((o) => !o.purchased);
+      }
+      
+      return orders;
     },
     retry: false,
   });
@@ -127,6 +141,8 @@ export const AdminPage = () => {
   const [arriveCost, setArriveCost] = useState<string>('');
   const [adminEmail, setAdminEmail] = useState('');
   const [adminPassword, setAdminPassword] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [purchasedFilter, setPurchasedFilter] = useState<string>('all');
 
   const createCargoMutation = useMutation({
     mutationFn: () =>
@@ -342,6 +358,54 @@ export const AdminPage = () => {
           ))}
         </div>
       </div>
+
+      {/* Filters */}
+      <div className="card p-6 bg-gradient-to-br from-white to-gray-50">
+        <div className="grid md:grid-cols-3 gap-4">
+          <div>
+            <label className="block text-sm font-bold text-gray-700 mb-2">
+              📊 {t('admin.filter_status', 'Фильтр по статусу')}
+            </label>
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="input-field w-full"
+            >
+              <option value="all">{t('admin.all_statuses', 'Все статусы')}</option>
+              <option value="pending_processing">{t('admin.status_pending', 'В обработке')}</option>
+              <option value="procured">{t('admin.status_procured', 'Закуплено')}</option>
+              <option value="purchased">{t('admin.status_purchased', 'Куплено')}</option>
+              <option value="completed">{t('admin.status_completed', 'Завершено')}</option>
+              <option value="delivered">{t('admin.status_delivered', 'Доставлено')}</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-bold text-gray-700 mb-2">
+              🛒 {t('admin.filter_purchased', 'Фильтр по покупке')}
+            </label>
+            <select
+              value={purchasedFilter}
+              onChange={(e) => setPurchasedFilter(e.target.value)}
+              className="input-field w-full"
+            >
+              <option value="all">{t('admin.all', 'Все')}</option>
+              <option value="purchased">{t('admin.purchased_only', 'Только купленные')}</option>
+              <option value="not_purchased">{t('admin.not_purchased', 'Не купленные')}</option>
+            </select>
+          </div>
+          <div className="flex items-end">
+            <button
+              onClick={() => {
+                setStatusFilter('all');
+                setPurchasedFilter('all');
+              }}
+              className="btn-secondary w-full"
+            >
+              🔄 {t('admin.reset_filters', 'Сбросить фильтры')}
+            </button>
+          </div>
+        </div>
+      </div>
       
       <div className="card overflow-hidden">
         <div className="overflow-x-auto">
@@ -358,7 +422,9 @@ export const AdminPage = () => {
                 <th className="text-left px-4 py-3 font-bold text-gray-700">{t('admin.status')}</th>
                 <th className="text-left px-4 py-3 font-bold text-gray-700">{t('admin.amount')}</th>
                 <th className="text-left px-4 py-3 font-bold text-gray-700">{t('admin.delivery')}</th>
+                <th className="text-left px-4 py-3 font-bold text-gray-700">{t('admin.purchased', 'Куплено')}</th>
                 <th className="text-left px-4 py-3 font-bold text-gray-700">{t('admin.created_at')}</th>
+                <th className="text-left px-4 py-3 font-bold text-gray-700">{t('admin.actions', 'Действия')}</th>
               </tr>
             </thead>
             <tbody>
@@ -366,9 +432,24 @@ export const AdminPage = () => {
                 <tr key={order.id} className={`border-t hover:bg-primary-50/50 transition-colors ${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}`}>
                   <td className="px-4 py-3 font-mono text-xs text-gray-900 font-semibold">{order.id}</td>
                   <td className="px-4 py-3">
-                    <span className="px-2 py-1 bg-primary-100 text-primary-700 rounded-lg text-xs font-bold border border-primary-200">
-                      {order.status}
-                    </span>
+                    <select
+                      value={order.status}
+                      onChange={(e) => {
+                        api.patch(`/admin/orders/${order.id}/status`, { status: e.target.value })
+                          .then(() => {
+                            queryClient.invalidateQueries({ queryKey: ['admin-orders'] });
+                            toast.success(t('admin.status_updated', 'Статус обновлён'));
+                          })
+                          .catch(() => toast.error(t('admin.status_update_failed', 'Не удалось обновить статус')));
+                      }}
+                      className="px-2 py-1 bg-primary-100 text-primary-700 rounded-lg text-xs font-bold border border-primary-200 hover:bg-primary-200 transition-colors"
+                    >
+                      <option value="pending_processing">{t('admin.status_pending', 'В обработке')}</option>
+                      <option value="procured">{t('admin.status_procured', 'Закуплено')}</option>
+                      <option value="purchased">{t('admin.status_purchased', 'Куплено')}</option>
+                      <option value="completed">{t('admin.status_completed', 'Завершено')}</option>
+                      <option value="delivered">{t('admin.status_delivered', 'Доставлено')}</option>
+                    </select>
                   </td>
                   <td className="px-4 py-3 font-semibold text-gray-900">
                     {Number(order.subtotal).toFixed(2)} {currencySymbol}
@@ -376,8 +457,37 @@ export const AdminPage = () => {
                   <td className="px-4 py-3 font-semibold text-gray-900">
                     {Number(order.deliveryFee).toFixed(2)} {currencySymbol}
                   </td>
+                  <td className="px-4 py-3">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={order.purchased || false}
+                        onChange={(e) => {
+                          api.patch(`/admin/orders/${order.id}/purchased`, { purchased: e.target.checked })
+                            .then(() => {
+                              queryClient.invalidateQueries({ queryKey: ['admin-orders'] });
+                              toast.success(e.target.checked 
+                                ? t('admin.marked_purchased', 'Отмечено как купленное')
+                                : t('admin.unmarked_purchased', 'Снята отметка о покупке'));
+                            })
+                            .catch(() => toast.error(t('admin.purchase_update_failed', 'Не удалось обновить статус покупки')));
+                        }}
+                        className="w-5 h-5 rounded border-2 border-gray-300 text-primary-600 focus:ring-primary-500 focus:ring-2 cursor-pointer"
+                      />
+                      <span className="text-xs text-gray-600">
+                        {order.purchased ? '✓' : '✗'} Taoworld
+                      </span>
+                    </label>
+                  </td>
                   <td className="px-4 py-3 text-xs text-gray-600">
                     {new Date(order.createdAt).toLocaleString()}
+                  </td>
+                  <td className="px-4 py-3">
+                    {order.purchasedAt && (
+                      <div className="text-xs text-green-600">
+                        {t('admin.purchased_at', 'Куплено')}: {new Date(order.purchasedAt).toLocaleString()}
+                      </div>
+                    )}
                   </td>
                 </tr>
               ))}

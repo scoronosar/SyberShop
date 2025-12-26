@@ -1,15 +1,18 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { fetchProduct } from '../api/products';
+import { fetchProduct, fetchRecommendations } from '../api/products';
 import { addToCart } from '../api/cart';
 import toast from 'react-hot-toast';
 import { useAuthStore } from '../state/auth';
 import { useSettingsStore } from '../state/settings';
 import { Modal } from '../components/Modal';
+import { ProductCard } from '../components/ProductCard';
+import { useTranslation } from 'react-i18next';
 import i18n from '../i18n';
 
 export const ProductPage = () => {
+  const { t } = useTranslation();
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [qty, setQty] = useState(1);
@@ -44,17 +47,23 @@ export const ProductPage = () => {
     enabled: !!id,
   });
 
+  const { data: recommendations } = useQuery({
+    queryKey: ['recommendations', id, currency, language],
+    queryFn: () => fetchRecommendations(id!, currency, language),
+    enabled: !!id && !!data,
+  });
+
   const addMutation = useMutation({
     mutationFn: ({ sku }: { sku?: string }) => addToCart(id!, qty, currency, sku),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['cart'] });
-      toast.success('Добавлено в корзину');
+      toast.success(t('product.added_to_cart', 'Добавлено в корзину'));
       setShowSkuModal(false);
       setSelectedOptions({});
       setSelectedSku(null);
       navigate('/cart');
     },
-    onError: () => toast.error('Не удалось добавить в корзину'),
+    onError: () => toast.error(t('product.add_failed', 'Не удалось добавить в корзину')),
   });
 
   // Handle "Add to Cart" button click
@@ -207,7 +216,7 @@ export const ProductPage = () => {
     <div className="space-y-6">
       {/* Breadcrumbs */}
       <div className="flex items-center gap-2 text-sm text-gray-600">
-        <button onClick={() => navigate('/')} className="hover:text-primary-600">Главная</button>
+        <button onClick={() => navigate('/')} className="hover:text-primary-600">{t('common.home')}</button>
         <span>›</span>
         {data.category && (
           <>
@@ -215,7 +224,7 @@ export const ProductPage = () => {
             <span>›</span>
           </>
         )}
-        <span className="text-gray-900 font-semibold truncate">{data.title.slice(0, 50)}...</span>
+        <span className="text-gray-900 font-semibold truncate">{(data.title || '').slice(0, 50)}...</span>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -241,7 +250,7 @@ export const ProductPage = () => {
               onClick={(e) => { e.stopPropagation(); setIsZoomed(true); }}
               className="absolute bottom-4 right-4 px-4 py-2 bg-white/90 backdrop-blur-sm text-gray-700 text-xs font-bold rounded-lg shadow-lg hover:bg-white transition-all"
             >
-              🔍 Увеличить
+              🔍 {t('product_page.zoom', 'Увеличить')}
             </button>
           </div>
 
@@ -283,12 +292,12 @@ export const ProductPage = () => {
           )}
           {data.sales && (
             <span className="px-3 py-1.5 bg-gradient-to-r from-emerald-100 to-green-100 text-emerald-700 rounded-lg text-xs font-bold border border-emerald-200">
-              🔥 {data.sales} продаж
+              🔥 {data.sales} {t('product_page.sales', 'продаж')}
             </span>
           )}
           {data.inventory !== undefined && (
             <span className="px-3 py-1.5 bg-gradient-to-r from-purple-100 to-indigo-100 text-purple-700 rounded-lg text-xs font-bold border border-purple-200">
-              📦 {data.inventory} в наличии
+              📦 {data.inventory} {t('product_page.in_stock', 'в наличии')}
             </span>
           )}
         </div>
@@ -302,19 +311,19 @@ export const ProductPage = () => {
           <div className="flex flex-wrap gap-4 text-sm text-gray-600">
             {data.brand && (
               <div className="flex items-center gap-2">
-                <span className="font-semibold text-gray-700">🏷️ Бренд:</span>
+                <span className="font-semibold text-gray-700">🏷️ {t('product_page.brand', 'Бренд')}:</span>
                 <span>{data.brand}</span>
               </div>
             )}
             {data.category && (
               <div className="flex items-center gap-2">
-                <span className="font-semibold text-gray-700">📂 Категория:</span>
+                <span className="font-semibold text-gray-700">📂 {t('product_page.category', 'Категория')}:</span>
                 <span>{data.category}</span>
               </div>
             )}
             {data.shop_name && (
               <div className="flex items-center gap-2">
-                <span className="font-semibold text-gray-700">🏪 Магазин:</span>
+                <span className="font-semibold text-gray-700">🏪 {t('product_page.shop', 'Магазин')}:</span>
                 <span>{data.shop_name}</span>
               </div>
             )}
@@ -340,24 +349,24 @@ export const ProductPage = () => {
                 onClick={() => setShowBreakdown((v) => !v)}
               >
                 <span>{showBreakdown ? '▼' : '▶'}</span>
-                <span>{showBreakdown ? 'Скрыть расчёт' : 'Показать расчёт'}</span>
+                <span>{showBreakdown ? t('product_page.hide_calculation', 'Скрыть расчёт') : t('product_page.show_calculation', 'Показать расчёт')}</span>
               </button>
               {showBreakdown && (
                 <div className="grid grid-cols-2 gap-3 text-sm animate-slide-up">
                   <div className="p-4 bg-orange-50 rounded-xl border-2 border-orange-200">
-                    <div className="font-bold text-orange-700 mb-1">Курс + наценка</div>
+                    <div className="font-bold text-orange-700 mb-1">{t('product_page.rate_markup', 'Курс + наценка')}</div>
                     <div className="text-lg font-semibold text-orange-900">
                       {data.converted_with_markup.toFixed(2)} {currencySymbol}
                     </div>
                   </div>
                   <div className="p-4 bg-slate-50 rounded-xl border-2 border-slate-200">
-                    <div className="font-bold text-slate-700 mb-1">Сервисный сбор</div>
+                    <div className="font-bold text-slate-700 mb-1">{t('product_page.service_fee', 'Сервисный сбор')}</div>
                     <div className="text-lg font-semibold text-slate-900">
                       {data.service_fee_amount.toFixed(2)} {currencySymbol}
                     </div>
                   </div>
                   <div className="col-span-2 text-xs text-gray-600 bg-white/50 p-3 rounded-lg">
-                    💡 Расчёт на сервере: rate × 1.05 → service +3%. Доставка будет добавлена при прибытии карго.
+                    💡 {t('product_page.calculation_note', 'Расчёт на сервере: rate × 1.05 → service +3%. Доставка будет добавлена при прибытии карго.')}
                   </div>
                 </div>
               )}
@@ -369,7 +378,7 @@ export const ProductPage = () => {
             onClick={() => setOpenPriceModal(true)}
           >
             <span>ℹ️</span>
-            <span>Детали цены</span>
+            <span>{t('product_page.price_details', 'Детали цены')}</span>
           </button>
         </div>
 
@@ -380,14 +389,14 @@ export const ProductPage = () => {
             className="btn-secondary flex-1 flex items-center justify-center gap-2"
           >
             <span>🔗</span>
-            <span>Поделиться</span>
+            <span>{t('product_page.share', 'Поделиться')}</span>
           </button>
           <button
-            onClick={() => toast.success('Добавлено в избранное (скоро)')}
+            onClick={() => toast.success(t('product_page.favorite_added', 'Добавлено в избранное (скоро)'))}
             className="btn-secondary flex-1 flex items-center justify-center gap-2"
           >
             <span>❤️</span>
-            <span>В избранное</span>
+            <span>{t('product_page.favorite', 'В избранное')}</span>
           </button>
         </div>
 
@@ -398,9 +407,9 @@ export const ProductPage = () => {
               <div className="flex items-center gap-3">
                 <span className="text-2xl">🎨</span>
                 <div>
-                  <div className="text-sm font-bold text-gray-900">Доступны варианты</div>
+                  <div className="text-sm font-bold text-gray-900">{t('product_page.variants_available', 'Доступны варианты')}</div>
                   <div className="text-xs text-gray-600">
-                    {data.sku_list.length} вариантов товара
+                    {data.sku_list.length} {t('product_page.variants_count', 'вариантов товара')}
                   </div>
                 </div>
               </div>
@@ -408,7 +417,7 @@ export const ProductPage = () => {
                 onClick={() => setShowSkuModal(true)}
                 className="px-4 py-2 rounded-xl bg-primary-500 hover:bg-primary-600 text-white font-bold text-sm transition-all hover:scale-105 shadow-md"
               >
-                Выбрать →
+                {t('product_page.select', 'Выбрать')} →
                 </button>
             </div>
           </div>
@@ -424,14 +433,14 @@ export const ProductPage = () => {
             {addMutation.isPending ? (
               <>
                 <div className="w-5 h-5 border-3 border-white border-t-transparent rounded-full animate-spin" />
-                <span>Добавляем...</span>
+                <span>{t('product.adding', 'Добавляем...')}</span>
               </>
             ) : (
               <>
                 <span className="text-2xl">🛒</span>
-                <span>Добавить в корзину</span>
+                <span>{t('product.add_to_cart', 'Добавить в корзину')}</span>
                 {data.sku_list && data.sku_list.length > 1 && (
-                  <span className="text-sm opacity-75">• Выбрать вариант</span>
+                  <span className="text-sm opacity-75">• {t('product_page.select_variant', 'Выбрать вариант')}</span>
                 )}
               </>
             )}
@@ -440,11 +449,11 @@ export const ProductPage = () => {
           <div className="grid grid-cols-2 gap-3">
             <div className="flex items-center gap-2 text-xs text-gray-600 bg-blue-50 border border-blue-200 rounded-lg p-3">
               <span className="text-lg">📦</span>
-              <span className="font-semibold">Доставка при прибытии</span>
+              <span className="font-semibold">{t('product_page.delivery_on_arrival', 'Доставка при прибытии')}</span>
             </div>
             <div className="flex items-center gap-2 text-xs text-gray-600 bg-green-50 border border-green-200 rounded-lg p-3">
               <span className="text-lg">✓</span>
-              <span className="font-semibold">Проверка качества</span>
+              <span className="font-semibold">{t('product_page.quality_check', 'Проверка качества')}</span>
             </div>
           </div>
         </div>
@@ -462,7 +471,7 @@ export const ProductPage = () => {
                 : 'bg-white text-gray-600 hover:bg-gray-50'
             }`}
           >
-            📝 Описание
+            📝 {t('product_page.description', 'Описание')}
           </button>
           <button
             onClick={() => setActiveTab('specs')}
@@ -472,7 +481,7 @@ export const ProductPage = () => {
                 : 'bg-white text-gray-600 hover:bg-gray-50'
             }`}
           >
-            📋 Характеристики
+            📋 {t('product_page.specs', 'Характеристики')}
           </button>
           <button
             onClick={() => setActiveTab('delivery')}
@@ -482,7 +491,7 @@ export const ProductPage = () => {
                 : 'bg-white text-gray-600 hover:bg-gray-50'
             }`}
           >
-            🚚 Доставка
+            🚚 {t('product_page.delivery', 'Доставка')}
           </button>
         </div>
 
@@ -497,7 +506,7 @@ export const ProductPage = () => {
                     poster={data.images?.[0]}
                   >
                     <source src={data.video_url} type="video/mp4" />
-                    Ваш браузер не поддерживает видео.
+                    {t('product_page.video_not_supported', 'Ваш браузер не поддерживает видео.')}
                   </video>
                 </div>
               )}
@@ -509,7 +518,7 @@ export const ProductPage = () => {
               ) : (
                 <div className="text-center py-12 text-gray-500">
                   <div className="text-5xl mb-3">📄</div>
-                  <p className="text-sm">Описание будет добавлено</p>
+                  <p className="text-sm">{t('product_page.description_coming', 'Описание будет добавлено')}</p>
                 </div>
               )}
             </div>
@@ -594,20 +603,20 @@ export const ProductPage = () => {
               <div className="p-6 bg-gradient-to-r from-amber-50 to-orange-50 rounded-2xl border-2 border-amber-200">
                 <h4 className="font-bold text-gray-900 mb-3 flex items-center gap-2">
                   <span>⏱️</span>
-                  <span>Примерные сроки</span>
+                  <span>{t('product_page.delivery_times', 'Сроки доставки')}</span>
                 </h4>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
                   <div className="text-center p-3 bg-white rounded-lg">
                     <div className="font-bold text-2xl text-primary-600 mb-1">2-5</div>
-                    <div className="text-gray-600">дней на закупку</div>
+                    <div className="text-gray-600">{t('product_page.days_purchase', 'дней на закупку')}</div>
                   </div>
                   <div className="text-center p-3 bg-white rounded-lg">
                     <div className="font-bold text-2xl text-primary-600 mb-1">3-7</div>
-                    <div className="text-gray-600">дней консолидация</div>
+                    <div className="text-gray-600">{t('product_page.days_consolidation', 'дней консолидация')}</div>
                   </div>
                   <div className="text-center p-3 bg-white rounded-lg">
                     <div className="font-bold text-2xl text-primary-600 mb-1">15-30</div>
-                    <div className="text-gray-600">дней международная доставка</div>
+                    <div className="text-gray-600">{t('product_page.days_international', 'дней международная доставка')}</div>
                   </div>
                 </div>
               </div>
@@ -615,6 +624,29 @@ export const ProductPage = () => {
           )}
         </div>
       </div>
+
+      {/* Recommended Products Section */}
+      {recommendations && recommendations.length > 0 && (
+        <div className="space-y-6 mt-12">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary-500 to-amber-500 flex items-center justify-center shadow-lg">
+                <span className="text-white text-2xl">✨</span>
+              </div>
+              <div>
+                <h2 className="text-2xl font-extrabold text-gray-900">{t('product_page.recommended', 'Рекомендуемые товары')}</h2>
+                <p className="text-sm text-gray-600">{t('product_page.recommended_desc', 'Похожие товары, которые могут вам понравиться')}</p>
+              </div>
+            </div>
+          </div>
+          
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+            {recommendations.slice(0, 10).map((product) => (
+              <ProductCard key={product.id} product={product} />
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Image Zoom Modal */}
       <Modal open={isZoomed} onClose={() => setIsZoomed(false)} title="">
@@ -643,50 +675,50 @@ export const ProductPage = () => {
           )}
         </div>
       </Modal>
-      <Modal open={openPriceModal} onClose={() => setOpenPriceModal(false)} title="💰 Детали цены">
+      <Modal open={openPriceModal} onClose={() => setOpenPriceModal(false)} title={`💰 ${t('product_page.price_details', 'Детали цены')}`}>
         {role === 'admin' ? (
           <div className="space-y-4">
             <div className="p-4 bg-gradient-to-br from-orange-50 to-amber-50 rounded-xl border border-orange-200">
-              <div className="text-sm text-gray-600 mb-1">Цена в CNY</div>
+              <div className="text-sm text-gray-600 mb-1">{t('product_page.price_cny', 'Цена в CNY')}</div>
               <div className="text-xl font-bold text-gray-900">{data.price_cny} ¥</div>
             </div>
             <div className="p-4 bg-gradient-to-br from-blue-50 to-cyan-50 rounded-xl border border-blue-200">
-              <div className="text-sm text-gray-600 mb-1">Курс + наценка</div>
+              <div className="text-sm text-gray-600 mb-1">{t('product_page.rate_markup', 'Курс + наценка')}</div>
               <div className="text-xl font-bold text-gray-900">
                 {data.converted_with_markup.toFixed(2)} {currencySymbol}
               </div>
             </div>
             <div className="p-4 bg-gradient-to-br from-purple-50 to-pink-50 rounded-xl border border-purple-200">
-              <div className="text-sm text-gray-600 mb-1">Сервисный сбор</div>
+              <div className="text-sm text-gray-600 mb-1">{t('product_page.service_fee', 'Сервисный сбор')}</div>
               <div className="text-xl font-bold text-gray-900">
                 {data.service_fee_amount.toFixed(2)} {currencySymbol}
               </div>
             </div>
             <div className="p-4 bg-gradient-to-br from-primary-100 to-amber-100 rounded-xl border-2 border-primary-300">
-              <div className="text-sm text-gray-700 mb-1">Итоговая цена</div>
+              <div className="text-sm text-gray-700 mb-1">{t('product_page.final_price', 'Итоговая цена')}</div>
               <div className="text-3xl font-extrabold bg-gradient-to-r from-primary-600 to-primary-500 bg-clip-text text-transparent">
                 {data.final_item_price.toFixed(2)} {currencySymbol}
               </div>
             </div>
             <div className="text-xs text-gray-600 bg-gray-50 p-3 rounded-lg">
-              ℹ️ Расчёт на сервере. Доставка добавится при прибытии карго.
+              ℹ️ {t('product_page.server_calculation', 'Расчёт на сервере. Доставка добавится при прибытии карго.')}
             </div>
           </div>
         ) : (
           <div className="space-y-4">
             <div className="p-6 bg-gradient-to-br from-primary-100 to-amber-100 rounded-xl border-2 border-primary-300 text-center">
-              <div className="text-sm text-gray-700 mb-2">Итоговая цена</div>
+              <div className="text-sm text-gray-700 mb-2">{t('product_page.final_price', 'Итоговая цена')}</div>
               <div className="text-4xl font-extrabold bg-gradient-to-r from-primary-600 to-primary-500 bg-clip-text text-transparent">
                 {data.final_item_price.toFixed(2)} {currencySymbol}
               </div>
             </div>
             <div className="p-4 bg-blue-50 rounded-xl border border-blue-200">
               <p className="text-sm text-gray-700">
-                ✓ Цена включает конвертацию и сервисный сбор.
+                ✓ {t('product_page.price_includes', 'Цена включает конвертацию и сервисный сбор.')}
               </p>
             </div>
             <div className="text-xs text-gray-600 bg-gray-50 p-3 rounded-lg">
-              📦 Доставка будет рассчитана при прибытии карго и добавлена к заказу.
+              📦 {t('product_page.delivery_calculated', 'Доставка будет рассчитана при прибытии карго и добавлена к заказу.')}
             </div>
           </div>
         )}
@@ -841,7 +873,7 @@ export const ProductPage = () => {
                     </div>
                     {selectedSku && getSkuQuantity(selectedSku) > 0 && (
                       <div className="text-sm text-gray-600 font-medium">
-                        Максимум: <span className="font-bold text-primary-600">{getSkuQuantity(selectedSku)}</span> шт.
+                        {t('product_page.maximum', 'Максимум')}: <span className="font-bold text-primary-600">{getSkuQuantity(selectedSku)}</span> {t('product_page.pcs', 'шт.')}
                       </div>
                     )}
                   </div>

@@ -2,12 +2,14 @@ import { Link } from 'react-router-dom';
 import type { Product } from '../api/products';
 import { useAuthStore } from '../state/auth';
 import { useSettingsStore } from '../state/settings';
+import { useTranslation } from 'react-i18next';
 
 type Props = {
   product: Product;
 };
 
 export const ProductCard = ({ product }: Props) => {
+  const { t } = useTranslation();
   const role = useAuthStore((s) => s.role);
   const currency = useSettingsStore((s) => s.currency);
   
@@ -69,14 +71,14 @@ export const ProductCard = ({ product }: Props) => {
 
         {product.inventory !== undefined && product.inventory < 10 && product.inventory > 0 && (
           <div className="absolute bottom-3 right-3 px-2.5 py-1 text-[10px] font-bold rounded-lg bg-amber-500/95 text-white backdrop-blur-sm shadow-lg">
-            ⚠️ Осталось {product.inventory}
+            ⚠️ {t('product_card.left', 'Осталось')} {product.inventory}
           </div>
         )}
 
         {/* Quick view button */}
         <div className="absolute inset-x-0 bottom-0 p-3 opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-y-2 group-hover:translate-y-0">
           <div className="text-xs text-center py-2 bg-white/95 backdrop-blur-md text-gray-900 rounded-xl font-bold shadow-xl">
-            👁️ Быстрый просмотр
+            👁️ {t('product_card.quick_view', 'Быстрый просмотр')}
           </div>
         </div>
       </div>
@@ -113,7 +115,7 @@ export const ProductCard = ({ product }: Props) => {
             <div className="flex items-center gap-1.5">
               <div className={`w-2 h-2 rounded-full ${product.inventory > 0 ? 'bg-green-500' : 'bg-red-500'}`} />
               <span className={`text-[11px] font-semibold ${product.inventory > 0 ? 'text-green-600' : 'text-red-600'}`}>
-                {product.inventory > 0 ? 'В наличии' : 'Нет в наличии'}
+                {product.inventory > 0 ? t('product_card.in_stock', 'В наличии') : t('product_card.out_of_stock', 'Нет в наличии')}
               </span>
             </div>
           )}
@@ -122,7 +124,7 @@ export const ProductCard = ({ product }: Props) => {
         {/* Hover Action Button */}
         <div className="pt-2 opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-y-1 group-hover:translate-y-0">
           <div className="text-xs text-center py-2.5 bg-gradient-to-r from-primary-500 to-primary-600 text-white rounded-xl font-bold shadow-md">
-          Подробнее →
+          {t('product_card.details', 'Подробнее')} →
           </div>
         </div>
       </div>
