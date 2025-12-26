@@ -833,3 +833,114 @@ export const AdminPage = () => {
   );
 };
 
+
+                          </button>
+                          <button
+                            onClick={() => setEditingCurrency(null)}
+                            className="px-3 py-1 bg-gray-400 text-white text-xs font-bold rounded-lg hover:bg-gray-500"
+                          >
+                            ✕ {t('admin.cancel')}
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          <button
+                            onClick={() => startEditCurrency(rate)}
+                            className="px-3 py-1 bg-blue-500 text-white text-xs font-bold rounded-lg hover:bg-blue-600"
+                          >
+                            ✎ {t('admin.edit')}
+                          </button>
+                          <button
+                            onClick={() => toggleCurrencyActive(rate.currency, rate.isActive)}
+                            className={`px-3 py-1 text-xs font-bold rounded-lg ${
+                              rate.isActive
+                                ? 'bg-yellow-500 hover:bg-yellow-600 text-white'
+                                : 'bg-green-500 hover:bg-green-600 text-white'
+                            }`}
+                          >
+                            {rate.isActive ? `⏸ ${t('admin.disable')}` : `▶ ${t('admin.enable')}`}
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-4 text-gray-500">
+              <div className="text-3xl mb-2">💱</div>
+              <p className="text-sm">{t('admin.no_rates')}</p>
+              <button
+                onClick={() => refetchCurrencyRates()}
+                className="mt-3 btn-secondary w-full"
+              >
+                🔄 {t('admin.update')}
+              </button>
+            </div>
+          )}
+        </div>
+
+        <div className="card p-6 space-y-4 bg-gradient-to-br from-white to-orange-50/30">
+          <div className="flex items-center gap-2">
+            <span className="text-xl">🔗</span>
+            <h2 className="text-xl font-bold text-gray-900">{t('admin.oauth_title')}</h2>
+          </div>
+          
+          {oauthStatus?.connected ? (
+            <div className="space-y-4">
+              <div className="p-4 bg-green-50 border-2 border-green-300 rounded-lg">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-green-600 text-xl">✓</span>
+                  <span className="font-bold text-green-800">{t('admin.oauth_connected')}</span>
+                </div>
+                <p className="text-sm text-gray-700">
+                  <span className="font-semibold">{t('admin.account')}:</span> {oauthStatus.account || 'Unknown'}
+                </p>
+                {oauthStatus.expiresAt && (
+                  <p className="text-xs text-gray-600 mt-1">
+                    {t('admin.token_valid_until')}: {new Date(oauthStatus.expiresAt).toLocaleString()}
+                  </p>
+                )}
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => refetchOAuth()}
+                  className="btn-secondary flex-1"
+                >
+                  🔄 {t('admin.refresh_status')}
+                </button>
+              <button
+                onClick={() => refreshTokenMutation.mutate()}
+                disabled={refreshTokenMutation.isPending}
+                  className="btn-secondary flex-1"
+              >
+                {refreshTokenMutation.isPending ? `⏳ ${t('admin.refreshing')}` : `🔄 ${t('admin.refresh_token')}`}
+              </button>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div className="p-4 bg-yellow-50 border-2 border-yellow-300 rounded-lg">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-yellow-600 text-xl">⚠️</span>
+                  <span className="font-bold text-yellow-800">{t('admin.oauth_not_connected')}</span>
+                </div>
+                <p className="text-sm text-gray-700">
+                  {t('admin.oauth_note')}
+                </p>
+              </div>
+              <button
+                onClick={handleConnectTaoWorld}
+                className="btn-primary w-full"
+              >
+                🔗 {t('admin.connect_oauth')}
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+

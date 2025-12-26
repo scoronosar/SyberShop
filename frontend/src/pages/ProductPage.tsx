@@ -85,7 +85,7 @@ export const ProductPage = () => {
 
     skuList.forEach((sku: any) => {
       (sku.properties ?? []).forEach((prop: any) => {
-        const propName = prop.prop_name || prop.name || 'Опция';
+        const propName = prop.prop_name || prop.name || t('product_page.option', 'Опция');
         const propValue = prop.value_name || prop.value || '';
 
         if (!groups.has(propName)) {
@@ -151,12 +151,12 @@ export const ProductPage = () => {
     if (navigator.share) {
       navigator.share({
         title: data.title,
-        text: `Проверьте этот товар: ${data.title}`,
+        text: `${t('product_page.share_text', 'Проверьте этот товар')}: ${data.title}`,
         url: window.location.href,
       }).catch(() => {});
     } else {
       navigator.clipboard.writeText(window.location.href);
-      toast.success('Ссылка скопирована!');
+      toast.success(t('product_page.link_copied', 'Ссылка скопирована!'));
     }
   };
 
@@ -895,6 +895,38 @@ export const ProductPage = () => {
                         {i18n.t('product.variant_unavailable_hint', 'Выбранный вариант нет в наличии. Попробуйте выбрать другой.')}
                       </div>
                     </div>
+                  ) : (
+                    <button
+                      onClick={() => addMutation.mutate({ sku: buildSkuPayloadString(selectedSku) })}
+                      disabled={addMutation.isPending}
+                      className="w-full bg-gradient-to-r from-primary-500 via-primary-600 to-amber-500 hover:from-primary-600 hover:to-amber-600 text-white py-4 rounded-xl font-bold text-lg shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3"
+                    >
+                      {addMutation.isPending ? (
+                        <>
+                          <div className="w-5 h-5 border-3 border-white border-t-transparent rounded-full animate-spin" />
+                          <span>{i18n.t('product.adding', 'Добавляем в корзину...')}</span>
+                        </>
+                      ) : (
+                        <>
+                          <span className="text-2xl">✓</span>
+                          <span>{i18n.t('product.add_to_cart', 'Добавить в корзину')}</span>
+                          <span className="text-sm opacity-90">
+                            • {qty} шт. • {(getSkuFinalPrice(selectedSku) * qty).toFixed(2)} {currencySymbol}
+                          </span>
+                        </>
+                      )}
+                    </button>
+                  )}
+                </div>
+            </div>
+          )}
+        </div>
+      </Modal>
+    </div>
+    </div>
+  );
+
+};
                   ) : (
                     <button
                       onClick={() => addMutation.mutate({ sku: buildSkuPayloadString(selectedSku) })}

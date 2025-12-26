@@ -297,9 +297,9 @@ export const HomePage = () => {
               </div>
               
               <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold leading-tight">
-                {t('home.title')}<br />
+                {t('home.title_part1', 'Миллионы товаров')}<br />
                 <span className="bg-gradient-to-r from-amber-200 to-yellow-200 bg-clip-text text-transparent">
-                  {t('home.title').split(' ').slice(-2).join(' ')}
+                  {t('home.title_part2', 'из Китая')}
                 </span>
               </h1>
               

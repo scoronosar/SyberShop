@@ -21,11 +21,46 @@ export class AdminController {
   ) {}
 
   @Get('orders')
-  orders() {
-    return this.prisma.order.findMany({
-      include: { items: true },
-      orderBy: { createdAt: 'desc' },
-    });
+  async orders() {
+    try {
+      const orders = await this.prisma.order.findMany({
+        include: { items: true },
+        orderBy: { createdAt: 'desc' },
+      });
+      // Ensure purchased and purchasedAt fields exist (for backward compatibility)
+      return orders.map(order => ({
+        ...order,
+        purchased: (order as any).purchased ?? false,
+        purchasedAt: (order as any).purchasedAt ?? null,
+      }));
+    } catch (error: any) {
+      console.error('Error fetching orders:', error);
+      // If schema doesn't have purchased field, return basic order data
+      try {
+        const orders = await this.prisma.order.findMany({
+          include: { items: true },
+          orderBy: { createdAt: 'desc' },
+          select: {
+            id: true,
+            userId: true,
+            subtotal: true,
+            deliveryFee: true,
+            total: true,
+            status: true,
+            createdAt: true,
+            chinaOrderId: true,
+            items: true,
+          },
+        });
+        return orders.map(order => ({
+          ...order,
+          purchased: false,
+          purchasedAt: null,
+        }));
+      } catch (fallbackError) {
+        throw error;
+      }
+    }
   }
 
   @Get('analytics/logistics')

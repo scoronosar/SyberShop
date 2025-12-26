@@ -138,3 +138,30 @@ export const LoginPage = () => {
   );
 };
 
+
+                <span>{t('login.loading')}</span>
+              </span>
+            ) : (
+              <span>{mode === 'login' ? `✓ ${t('login.submit_login')}` : `✓ ${t('login.submit_register')}`}</span>
+            )}
+          </button>
+        </form>
+
+        <div className="text-center pt-4 border-t border-gray-200">
+          <button
+            className="text-sm font-medium text-primary-600 hover:text-primary-700 hover:underline"
+            onClick={() => setMode(mode === 'login' ? 'register' : 'login')}
+          >
+            {mode === 'login' ? `📝 ${t('login.switch_to_register')}` : `🔑 ${t('login.switch_to_login')}`}
+          </button>
+        </div>
+
+        <div className="text-xs text-gray-600 bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 p-4 rounded-xl">
+          <div className="font-semibold mb-1">ℹ️ {t('login.info_title')}</div>
+          <div>{t('login.info_text')}</div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
