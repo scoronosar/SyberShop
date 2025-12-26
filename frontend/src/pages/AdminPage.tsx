@@ -5,11 +5,13 @@ import { createCargo, arriveCargo } from '../api/logistics';
 import { createAdmin } from '../api/auth';
 import { getOAuthStatus, initiateOAuth, refreshOAuthToken } from '../api/oauth';
 import { getAllCurrencyRates, updateCurrencyRate } from '../api/currency-rates';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import type { FormEvent } from 'react';
 import toast from 'react-hot-toast';
+import { useTranslation } from 'react-i18next';
 
 export const AdminPage = () => {
+  const { t } = useTranslation();
   const { data, isLoading, isError: isOrdersError, error: ordersError } = useQuery({
     queryKey: ['admin-orders'],
     queryFn: async () => {
@@ -18,6 +20,71 @@ export const AdminPage = () => {
     },
     retry: false,
   });
+
+  // Calculate analytics from orders data
+  const analytics = useMemo(() => {
+    if (!data || data.length === 0) {
+      return {
+        totalOrders: 0,
+        totalRevenue: 0,
+        pendingOrders: 0,
+        completedOrders: 0,
+        averageOrder: 0,
+        todayOrders: 0,
+        weekOrders: 0,
+        monthOrders: 0,
+        revenueToday: 0,
+        revenueWeek: 0,
+        revenueMonth: 0,
+        ordersByStatus: {} as Record<string, number>,
+      };
+    }
+
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const weekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const monthAgo = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000);
+
+    const totalOrders = data.length;
+    const totalRevenue = data.reduce((sum, o) => sum + Number(o.total || 0), 0);
+    const pendingOrders = data.filter((o) => o.status === 'pending' || o.status === 'processing').length;
+    const completedOrders = data.filter((o) => o.status === 'completed' || o.status === 'delivered').length;
+    const averageOrder = totalOrders > 0 ? totalRevenue / totalOrders : 0;
+
+    const todayOrders = data.filter((o) => new Date(o.createdAt) >= today).length;
+    const weekOrders = data.filter((o) => new Date(o.createdAt) >= weekAgo).length;
+    const monthOrders = data.filter((o) => new Date(o.createdAt) >= monthAgo).length;
+
+    const revenueToday = data
+      .filter((o) => new Date(o.createdAt) >= today)
+      .reduce((sum, o) => sum + Number(o.total || 0), 0);
+    const revenueWeek = data
+      .filter((o) => new Date(o.createdAt) >= weekAgo)
+      .reduce((sum, o) => sum + Number(o.total || 0), 0);
+    const revenueMonth = data
+      .filter((o) => new Date(o.createdAt) >= monthAgo)
+      .reduce((sum, o) => sum + Number(o.total || 0), 0);
+
+    const ordersByStatus: Record<string, number> = {};
+    data.forEach((o) => {
+      ordersByStatus[o.status] = (ordersByStatus[o.status] || 0) + 1;
+    });
+
+    return {
+      totalOrders,
+      totalRevenue,
+      pendingOrders,
+      completedOrders,
+      averageOrder,
+      todayOrders,
+      weekOrders,
+      monthOrders,
+      revenueToday,
+      revenueWeek,
+      revenueMonth,
+      ordersByStatus,
+    };
+  }, [data]);
 
   const { data: oauthStatus, refetch: refetchOAuth } = useQuery({
     queryKey: ['oauth-status'],
@@ -71,51 +138,51 @@ export const AdminPage = () => {
         cargoCost ? Number(cargoCost) : undefined,
       ),
     onSuccess: (res) => {
-      toast.success(`Карго создано: ${res.cargoId}`);
+      toast.success(`${t('admin.cargo_created')}: ${res.cargoId}`);
       queryClient.invalidateQueries({ queryKey: ['admin-orders'] });
     },
-    onError: () => toast.error('Не удалось создать карго'),
+    onError: () => toast.error(t('admin.cargo_failed')),
   });
 
   const arriveMutation = useMutation({
     mutationFn: () => arriveCargo(cargoId, arriveCost ? Number(arriveCost) : undefined),
     onSuccess: () => {
-      toast.success('Карго прибыло, доставка начислена');
+      toast.success(t('admin.arrival_marked'));
       queryClient.invalidateQueries({ queryKey: ['admin-orders'] });
     },
-    onError: () => toast.error('Не удалось отметить прибытие'),
+    onError: () => toast.error(t('admin.arrival_failed')),
   });
 
   const createAdminMutation = useMutation({
     mutationFn: () => createAdmin(adminEmail, adminPassword),
     onSuccess: () => {
-      toast.success('Админ создан');
+      toast.success(t('admin.admin_created'));
       setAdminEmail('');
       setAdminPassword('');
     },
-    onError: () => toast.error('Не удалось создать админа'),
+    onError: () => toast.error(t('admin.admin_failed')),
   });
 
   const refreshTokenMutation = useMutation({
     mutationFn: refreshOAuthToken,
     onSuccess: () => {
-      toast.success('Токен обновлён');
+      toast.success(t('admin.token_refreshed'));
       refetchOAuth();
     },
-    onError: () => toast.error('Не удалось обновить токен'),
+    onError: () => toast.error(t('admin.token_failed')),
   });
 
   const updateCurrencyMutation = useMutation({
     mutationFn: ({ currency: curr, data }: { currency: string; data: any }) =>
       updateCurrencyRate(curr, data),
     onSuccess: () => {
-      toast.success('Курс валюты обновлён');
+      toast.success(t('admin.rate_updated'));
       refetchCurrencyRates();
       queryClient.invalidateQueries({ queryKey: ['products'] });
       queryClient.invalidateQueries({ queryKey: ['product'] });
       setEditingCurrency(null);
     },
-    onError: () => toast.error('Не удалось обновить курс'),
+    onError: () => toast.error(t('admin.rate_failed')),
   });
 
   const handleConnectTaoWorld = () => {
@@ -171,7 +238,7 @@ export const AdminPage = () => {
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="text-center">
           <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-r from-primary-400 to-primary-600 animate-pulse" />
-          <p className="text-gray-600 font-medium">Загружаем заказы...</p>
+          <p className="text-gray-600 font-medium">{t('admin.loading')}</p>
         </div>
       </div>
     );
@@ -179,8 +246,8 @@ export const AdminPage = () => {
 
   if (isOrdersError) {
     const errorMessage = (ordersError as any)?.response?.status === 403
-      ? 'Доступ запрещён. Убедитесь, что вы вошли как администратор.'
-      : (ordersError as any)?.response?.data?.message || (ordersError as any)?.message || 'Не удалось загрузить заказы';
+      ? t('admin.access_denied')
+      : (ordersError as any)?.response?.data?.message || (ordersError as any)?.message || t('admin.error');
     
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
@@ -188,13 +255,13 @@ export const AdminPage = () => {
           <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-red-100 flex items-center justify-center">
             <span className="text-red-600 text-3xl">⚠️</span>
           </div>
-          <h2 className="text-xl font-bold text-gray-900 mb-2">Ошибка загрузки заказов</h2>
+          <h2 className="text-xl font-bold text-gray-900 mb-2">{t('admin.error')}</h2>
           <p className="text-gray-600 mb-4">{errorMessage}</p>
           <button
             onClick={() => window.location.reload()}
             className="btn-primary"
           >
-            🔄 Обновить страницу
+            🔄 {t('admin.refresh')}
           </button>
         </div>
       </div>
@@ -209,12 +276,70 @@ export const AdminPage = () => {
             <span className="text-white text-2xl">⚙️</span>
           </div>
           <div>
-            <h1 className="text-3xl font-extrabold text-gray-900">Админ панель</h1>
-            <p className="text-sm text-gray-600">Управление заказами и логистикой</p>
+            <h1 className="text-3xl font-extrabold text-gray-900">{t('admin.title')}</h1>
+            <p className="text-sm text-gray-600">{t('admin.subtitle')}</p>
           </div>
         </div>
         <div className="text-xs text-gray-500 bg-amber-50 px-3 py-2 rounded-lg border border-amber-200">
-          💾 Данные из бэкенда
+          💾 {t('admin.backend_data')}
+        </div>
+      </div>
+
+      {/* Analytics Section */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="card p-6 bg-gradient-to-br from-blue-50 to-cyan-50 border-2 border-blue-200">
+          <div className="text-sm text-gray-600 mb-1">{t('admin.total_orders')}</div>
+          <div className="text-3xl font-extrabold text-gray-900">{analytics.totalOrders}</div>
+        </div>
+        <div className="card p-6 bg-gradient-to-br from-green-50 to-emerald-50 border-2 border-green-200">
+          <div className="text-sm text-gray-600 mb-1">{t('admin.total_revenue')}</div>
+          <div className="text-3xl font-extrabold text-gray-900">
+            {analytics.totalRevenue.toFixed(2)} {currencySymbol}
+          </div>
+        </div>
+        <div className="card p-6 bg-gradient-to-br from-yellow-50 to-amber-50 border-2 border-yellow-200">
+          <div className="text-sm text-gray-600 mb-1">{t('admin.pending_orders')}</div>
+          <div className="text-3xl font-extrabold text-gray-900">{analytics.pendingOrders}</div>
+        </div>
+        <div className="card p-6 bg-gradient-to-br from-purple-50 to-pink-50 border-2 border-purple-200">
+          <div className="text-sm text-gray-600 mb-1">{t('admin.completed_orders')}</div>
+          <div className="text-3xl font-extrabold text-gray-900">{analytics.completedOrders}</div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="card p-6 bg-gradient-to-br from-indigo-50 to-blue-50 border-2 border-indigo-200">
+          <div className="text-sm text-gray-600 mb-1">{t('admin.average_order')}</div>
+          <div className="text-2xl font-extrabold text-gray-900">
+            {analytics.averageOrder.toFixed(2)} {currencySymbol}
+          </div>
+        </div>
+        <div className="card p-6 bg-gradient-to-br from-teal-50 to-cyan-50 border-2 border-teal-200">
+          <div className="text-sm text-gray-600 mb-1">{t('admin.revenue_today')}</div>
+          <div className="text-2xl font-extrabold text-gray-900">
+            {analytics.revenueToday.toFixed(2)} {currencySymbol}
+          </div>
+          <div className="text-xs text-gray-500 mt-1">{analytics.todayOrders} {t('admin.today_orders')}</div>
+        </div>
+        <div className="card p-6 bg-gradient-to-br from-orange-50 to-red-50 border-2 border-orange-200">
+          <div className="text-sm text-gray-600 mb-1">{t('admin.revenue_month')}</div>
+          <div className="text-2xl font-extrabold text-gray-900">
+            {analytics.revenueMonth.toFixed(2)} {currencySymbol}
+          </div>
+          <div className="text-xs text-gray-500 mt-1">{analytics.monthOrders} {t('admin.this_month')}</div>
+        </div>
+      </div>
+
+      {/* Orders by Status */}
+      <div className="card p-6">
+        <h2 className="text-xl font-bold text-gray-900 mb-4">{t('admin.orders_by_status')}</h2>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {Object.entries(analytics.ordersByStatus).map(([status, count]) => (
+            <div key={status} className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+              <div className="text-xs text-gray-600 mb-1">{status}</div>
+              <div className="text-2xl font-extrabold text-gray-900">{count}</div>
+            </div>
+          ))}
         </div>
       </div>
       
@@ -223,17 +348,17 @@ export const AdminPage = () => {
           {!data || data.length === 0 ? (
             <div className="text-center py-8 text-gray-500">
               <div className="text-3xl mb-2">📦</div>
-              <p className="text-sm">Заказы не найдены</p>
+              <p className="text-sm">{t('admin.no_orders')}</p>
             </div>
           ) : (
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-gradient-to-r from-gray-100 to-gray-50 border-b-2 border-gray-300">
-                <th className="text-left px-4 py-3 font-bold text-gray-700">ID заказа</th>
-                <th className="text-left px-4 py-3 font-bold text-gray-700">Статус</th>
-                <th className="text-left px-4 py-3 font-bold text-gray-700">Сумма</th>
-                <th className="text-left px-4 py-3 font-bold text-gray-700">Доставка</th>
-                <th className="text-left px-4 py-3 font-bold text-gray-700">Дата создания</th>
+                <th className="text-left px-4 py-3 font-bold text-gray-700">{t('admin.order_id')}</th>
+                <th className="text-left px-4 py-3 font-bold text-gray-700">{t('admin.status')}</th>
+                <th className="text-left px-4 py-3 font-bold text-gray-700">{t('admin.amount')}</th>
+                <th className="text-left px-4 py-3 font-bold text-gray-700">{t('admin.delivery')}</th>
+                <th className="text-left px-4 py-3 font-bold text-gray-700">{t('admin.created_at')}</th>
               </tr>
             </thead>
             <tbody>
@@ -266,12 +391,12 @@ export const AdminPage = () => {
         <div className="card p-6 space-y-4 bg-gradient-to-br from-white to-blue-50/30">
           <div className="flex items-center gap-2">
             <span className="text-xl">📦</span>
-            <h2 className="text-xl font-bold text-gray-900">Создать карго</h2>
+            <h2 className="text-xl font-bold text-gray-900">{t('admin.create_cargo')}</h2>
           </div>
           <form className="space-y-4" onSubmit={submitCreate}>
             <div>
               <label className="text-sm font-bold text-gray-700 mb-2 block">
-                🔢 ID заказов (через запятую)
+                🔢 {t('admin.order_ids')}
               </label>
               <input
                 value={orderIdsInput}
@@ -282,7 +407,7 @@ export const AdminPage = () => {
             </div>
             <div>
               <label className="text-sm font-bold text-gray-700 mb-2 block">
-                💰 Стоимость карго (опционально)
+                💰 {t('admin.cargo_cost')}
               </label>
               <input
                 value={cargoCost}
@@ -298,7 +423,7 @@ export const AdminPage = () => {
               disabled={createCargoMutation.isPending}
               className="btn-primary w-full"
             >
-              {createCargoMutation.isPending ? '⏳ Создаём...' : '✓ Создать карго'}
+              {createCargoMutation.isPending ? `⏳ ${t('admin.creating')}` : `✓ ${t('admin.create_cargo')}`}
             </button>
           </form>
         </div>
@@ -306,12 +431,12 @@ export const AdminPage = () => {
         <div className="card p-6 space-y-4 bg-gradient-to-br from-white to-green-50/30">
           <div className="flex items-center gap-2">
             <span className="text-xl">✈️</span>
-            <h2 className="text-xl font-bold text-gray-900">Отметить прибытие</h2>
+            <h2 className="text-xl font-bold text-gray-900">{t('admin.mark_arrival')}</h2>
           </div>
           <form className="space-y-4" onSubmit={submitArrive}>
             <div>
               <label className="text-sm font-bold text-gray-700 mb-2 block">
-                🏷️ ID карго
+                🏷️ {t('admin.cargo_id')}
               </label>
               <input
                 value={cargoId}
@@ -322,7 +447,7 @@ export const AdminPage = () => {
             </div>
             <div>
               <label className="text-sm font-bold text-gray-700 mb-2 block">
-                💵 Фактическая стоимость (опционально)
+                💵 {t('admin.actual_cost')}
               </label>
               <input
                 value={arriveCost}
@@ -338,7 +463,7 @@ export const AdminPage = () => {
               disabled={arriveMutation.isPending}
               className="btn-primary w-full"
             >
-              {arriveMutation.isPending ? '⏳ Обрабатываем...' : '✓ Отметить прибытие'}
+              {arriveMutation.isPending ? `⏳ ${t('admin.processing')}` : `✓ ${t('admin.mark_arrival')}`}
             </button>
           </form>
         </div>
@@ -346,7 +471,7 @@ export const AdminPage = () => {
         <div className="card p-6 space-y-4 bg-gradient-to-br from-white to-purple-50/30">
           <div className="flex items-center gap-2">
             <span className="text-xl">👤</span>
-            <h2 className="text-xl font-bold text-gray-900">Создать администратора</h2>
+            <h2 className="text-xl font-bold text-gray-900">{t('admin.create_admin')}</h2>
           </div>
           <form
             className="space-y-4"
@@ -370,7 +495,7 @@ export const AdminPage = () => {
             </div>
             <div>
               <label className="text-sm font-bold text-gray-700 mb-2 block">
-                🔑 Пароль
+                🔑 {t('admin.password')}
               </label>
               <input
                 value={adminPassword}
@@ -387,7 +512,7 @@ export const AdminPage = () => {
               disabled={createAdminMutation.isPending}
               className="btn-primary w-full"
             >
-              {createAdminMutation.isPending ? '⏳ Создаём...' : '✓ Создать администратора'}
+              {createAdminMutation.isPending ? `⏳ ${t('admin.creating')}` : `✓ ${t('admin.create_admin')}`}
             </button>
           </form>
         </div>
@@ -395,33 +520,33 @@ export const AdminPage = () => {
         <div className="card p-6 space-y-4 bg-gradient-to-br from-white to-green-50/30">
           <div className="flex items-center gap-2">
             <span className="text-xl">💱</span>
-            <h2 className="text-xl font-bold text-gray-900">Курсы валют</h2>
+            <h2 className="text-xl font-bold text-gray-900">{t('admin.currency_rates')}</h2>
           </div>
           
           <p className="text-sm text-gray-600">
-            Настройте курс конвертации из китайского юаня (CNY) в другие валюты и процент наценки.
+            {t('admin.currency_note')}
           </p>
 
           {isLoadingCurrencyRates ? (
             <div className="text-center py-4 text-gray-500">
               <div className="text-3xl mb-2">💱</div>
-              <p className="text-sm">Загрузка курсов валют...</p>
+              <p className="text-sm">{t('admin.loading_rates')}</p>
             </div>
           ) : isCurrencyRatesError ? (
             <div className="p-4 bg-red-50 border-2 border-red-200 rounded-xl">
-              <div className="font-bold text-red-700 mb-1">Не удалось загрузить курсы валют</div>
+              <div className="font-bold text-red-700 mb-1">{t('admin.rates_error')}</div>
               <div className="text-xs text-red-600 break-words">
                 {(currencyRatesError as any)?.response?.status === 403
-                  ? 'Доступ запрещён. Убедитесь, что вы вошли как администратор.'
+                  ? t('admin.access_denied')
                   : (currencyRatesError as any)?.response?.data?.message ||
                     (currencyRatesError as any)?.message ||
-                    'Ошибка запроса'}
+                    t('admin.error')}
               </div>
               <button
                 onClick={() => refetchCurrencyRates()}
                 className="mt-3 btn-secondary w-full"
               >
-                🔄 Повторить
+                🔄 {t('admin.retry')}
               </button>
             </div>
           ) : currencyRates && currencyRates.length > 0 ? (
@@ -448,7 +573,7 @@ export const AdminPage = () => {
                         {editingCurrency === rate.currency ? (
                           <div className="flex gap-2 mt-2">
                             <div className="flex items-center gap-1">
-                              <span className="text-xs text-gray-600">Курс:</span>
+                              <span className="text-xs text-gray-600">{t('admin.rate')}:</span>
                               <input
                                 type="number"
                                 step="0.0001"
@@ -460,7 +585,7 @@ export const AdminPage = () => {
                               />
                             </div>
                             <div className="flex items-center gap-1">
-                              <span className="text-xs text-gray-600">Наценка:</span>
+                              <span className="text-xs text-gray-600">{t('admin.markup')}:</span>
                               <input
                                 type="number"
                                 step="0.01"
@@ -474,7 +599,7 @@ export const AdminPage = () => {
                           </div>
                         ) : (
                           <div className="text-xs text-gray-600 mt-1">
-                            1 CNY (¥) = {rate.rateFromCNY} {rate.symbol} × {rate.markup} (наценка)
+                            1 CNY (¥) = {rate.rateFromCNY} {rate.symbol} × {rate.markup} ({t('admin.markup')})
                           </div>
                         )}
                       </div>
@@ -486,13 +611,13 @@ export const AdminPage = () => {
                             onClick={() => saveEditCurrency(rate.currency)}
                             className="px-3 py-1 bg-green-500 text-white text-xs font-bold rounded-lg hover:bg-green-600"
                           >
-                            ✓ Сохранить
+                            ✓ {t('admin.save')}
                           </button>
                           <button
                             onClick={() => setEditingCurrency(null)}
                             className="px-3 py-1 bg-gray-400 text-white text-xs font-bold rounded-lg hover:bg-gray-500"
                           >
-                            ✕ Отмена
+                            ✕ {t('admin.cancel')}
                           </button>
                         </>
                       ) : (
@@ -501,7 +626,7 @@ export const AdminPage = () => {
                             onClick={() => startEditCurrency(rate)}
                             className="px-3 py-1 bg-blue-500 text-white text-xs font-bold rounded-lg hover:bg-blue-600"
                           >
-                            ✎ Изменить
+                            ✎ {t('admin.edit')}
                           </button>
                           <button
                             onClick={() => toggleCurrencyActive(rate.currency, rate.isActive)}
@@ -511,7 +636,7 @@ export const AdminPage = () => {
                                 : 'bg-green-500 hover:bg-green-600 text-white'
                             }`}
                           >
-                            {rate.isActive ? '⏸ Отключить' : '▶ Включить'}
+                            {rate.isActive ? `⏸ ${t('admin.disable')}` : `▶ ${t('admin.enable')}`}
                           </button>
                         </>
                       )}
@@ -523,12 +648,12 @@ export const AdminPage = () => {
           ) : (
             <div className="text-center py-4 text-gray-500">
               <div className="text-3xl mb-2">💱</div>
-              <p className="text-sm">Курсы валют не найдены</p>
+              <p className="text-sm">{t('admin.no_rates')}</p>
               <button
                 onClick={() => refetchCurrencyRates()}
                 className="mt-3 btn-secondary w-full"
               >
-                🔄 Обновить
+                🔄 {t('admin.update')}
               </button>
             </div>
           )}
@@ -537,7 +662,7 @@ export const AdminPage = () => {
         <div className="card p-6 space-y-4 bg-gradient-to-br from-white to-orange-50/30">
           <div className="flex items-center gap-2">
             <span className="text-xl">🔗</span>
-            <h2 className="text-xl font-bold text-gray-900">TaoWorld API</h2>
+            <h2 className="text-xl font-bold text-gray-900">{t('admin.oauth_title')}</h2>
           </div>
           
           {oauthStatus?.connected ? (
@@ -545,14 +670,14 @@ export const AdminPage = () => {
               <div className="p-4 bg-green-50 border-2 border-green-300 rounded-lg">
                 <div className="flex items-center gap-2 mb-2">
                   <span className="text-green-600 text-xl">✓</span>
-                  <span className="font-bold text-green-800">Подключено</span>
+                  <span className="font-bold text-green-800">{t('admin.oauth_connected')}</span>
                 </div>
                 <p className="text-sm text-gray-700">
-                  <span className="font-semibold">Аккаунт:</span> {oauthStatus.account || 'Unknown'}
+                  <span className="font-semibold">{t('admin.account')}:</span> {oauthStatus.account || 'Unknown'}
                 </p>
                 {oauthStatus.expiresAt && (
                   <p className="text-xs text-gray-600 mt-1">
-                    Токен действителен до: {new Date(oauthStatus.expiresAt).toLocaleString()}
+                    {t('admin.token_valid_until')}: {new Date(oauthStatus.expiresAt).toLocaleString()}
                   </p>
                 )}
               </div>
@@ -561,14 +686,14 @@ export const AdminPage = () => {
                   onClick={() => refetchOAuth()}
                   className="btn-secondary flex-1"
                 >
-                  🔄 Обновить статус
+                  🔄 {t('admin.refresh_status')}
                 </button>
               <button
                 onClick={() => refreshTokenMutation.mutate()}
                 disabled={refreshTokenMutation.isPending}
                   className="btn-secondary flex-1"
               >
-                {refreshTokenMutation.isPending ? '⏳ Обновляем...' : '🔄 Обновить токен'}
+                {refreshTokenMutation.isPending ? `⏳ ${t('admin.refreshing')}` : `🔄 ${t('admin.refresh_token')}`}
               </button>
               </div>
             </div>
@@ -577,17 +702,17 @@ export const AdminPage = () => {
               <div className="p-4 bg-yellow-50 border-2 border-yellow-300 rounded-lg">
                 <div className="flex items-center gap-2 mb-2">
                   <span className="text-yellow-600 text-xl">⚠️</span>
-                  <span className="font-bold text-yellow-800">Не подключено</span>
+                  <span className="font-bold text-yellow-800">{t('admin.oauth_not_connected')}</span>
                 </div>
                 <p className="text-sm text-gray-700">
-                  Подключите TaoWorld аккаунт для получения реальных данных товаров из Taobao API.
+                  {t('admin.oauth_note')}
                 </p>
               </div>
               <button
                 onClick={handleConnectTaoWorld}
                 className="btn-primary w-full"
               >
-                🔗 Подключить TaoWorld
+                🔗 {t('admin.connect_oauth')}
               </button>
             </div>
           )}

@@ -4,8 +4,10 @@ import { createOrder } from '../api/orders';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { useSettingsStore } from '../state/settings';
+import { useTranslation } from 'react-i18next';
 
 export const CartPage = () => {
+  const { t } = useTranslation();
   const { data, isLoading } = useQuery({ queryKey: ['cart'], queryFn: getCart });
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -45,20 +47,20 @@ export const CartPage = () => {
   const createOrderMutation = useMutation({
     mutationFn: createOrder,
     onSuccess: (order) => {
-      toast.success('Заказ создан');
+      toast.success(t('cart.order_created'));
       queryClient.invalidateQueries({ queryKey: ['cart'] });
       navigate(`/order/${order.id}`);
     },
-    onError: () => toast.error('Не удалось создать заказ'),
+    onError: () => toast.error(t('cart.order_failed')),
   });
 
   const removeItemMutation = useMutation({
     mutationFn: (itemId: string) => removeCartItem(itemId),
     onSuccess: () => {
-      toast.success('Удалено из корзины');
+      toast.success(t('cart.removed'));
       queryClient.invalidateQueries({ queryKey: ['cart'] });
     },
-    onError: () => toast.error('Не удалось удалить товар'),
+    onError: () => toast.error(t('cart.remove_failed')),
   });
 
   if (isLoading) {
@@ -66,7 +68,7 @@ export const CartPage = () => {
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="text-center">
           <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-r from-primary-400 to-primary-600 animate-pulse" />
-          <p className="text-gray-600 font-medium">Загружаем корзину...</p>
+          <p className="text-gray-600 font-medium">{t('cart.loading')}</p>
         </div>
       </div>
     );
@@ -83,25 +85,25 @@ export const CartPage = () => {
               <span className="text-white text-xl">🛒</span>
             </div>
             <div>
-              <h1 className="text-2xl font-extrabold text-gray-900">Корзина</h1>
-              <div className="text-sm text-gray-500">{items.length} товар(ов)</div>
+              <h1 className="text-2xl font-extrabold text-gray-900">{t('cart.title')}</h1>
+              <div className="text-sm text-gray-500">{items.length} {t('cart.items_count')}</div>
             </div>
           </div>
           <div className="text-xs text-gray-500 bg-blue-50 px-3 py-2 rounded-lg border border-blue-200">
-            💡 Серверные цены
+            💡 {t('cart.server_prices')}
           </div>
         </div>
         
         {items.length === 0 && (
           <div className="card p-12 text-center">
             <div className="text-6xl mb-4">🛒</div>
-            <h3 className="text-xl font-bold text-gray-800 mb-2">Корзина пуста</h3>
-            <p className="text-gray-600 mb-6">Добавьте товары для оформления заказа</p>
+            <h3 className="text-xl font-bold text-gray-800 mb-2">{t('cart.empty')}</h3>
+            <p className="text-gray-600 mb-6">{t('cart.empty_hint')}</p>
             <button
               onClick={() => navigate('/')}
               className="btn-primary mx-auto"
             >
-              Перейти к покупкам
+              {t('cart.go_to_shopping')}
             </button>
           </div>
         )}
@@ -126,14 +128,14 @@ export const CartPage = () => {
                     onClick={() => removeItemMutation.mutate(item.id)}
                     disabled={removeItemMutation.isPending}
                     className="px-3 py-2 rounded-lg border-2 border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300 font-bold text-xs transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                    title="Удалить из корзины"
+                    title={t('cart.remove')}
                   >
                     🗑️
                   </button>
                 </div>
                 <div className="flex items-center gap-4 text-sm">
                   <div className="px-3 py-1 bg-primary-50 text-primary-700 rounded-lg font-semibold">
-                    {item.qty} шт.
+                    {item.qty} {t('cart.quantity')}
                   </div>
                   <div className="text-gray-600">
                     × {item.price.toFixed(2)} {currencySymbol}
@@ -141,7 +143,7 @@ export const CartPage = () => {
                 </div>
                 <div className="mt-3 pt-3 border-t border-gray-100">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-600">Итого:</span>
+                    <span className="text-sm text-gray-600">{t('cart.total')}:</span>
                     <span className="text-lg font-extrabold text-primary-600">
                       {item.lineTotal.toFixed(2)} {currencySymbol}
                     </span>
@@ -157,25 +159,25 @@ export const CartPage = () => {
         <div className="card p-6 space-y-6 sticky top-24">
           <div className="text-xl font-bold text-gray-900 flex items-center gap-2">
             <span>📋</span>
-            <span>Итого</span>
+            <span>{t('cart.total')}</span>
           </div>
           
           <div className="space-y-3">
             <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-              <span className="text-sm font-medium text-gray-700">Товары</span>
+              <span className="text-sm font-medium text-gray-700">{t('cart.subtotal')}</span>
               <span className="text-lg font-bold text-gray-900">
                 {data?.subtotal.toFixed(2)} {currencySymbol}
               </span>
             </div>
             
             <div className="flex justify-between items-center p-3 bg-blue-50 rounded-lg border border-blue-200">
-              <span className="text-sm font-medium text-gray-700">Доставка</span>
-              <span className="text-xs text-blue-700 font-medium">при прибытии</span>
+              <span className="text-sm font-medium text-gray-700">{t('cart.delivery')}</span>
+              <span className="text-xs text-blue-700 font-medium">{t('cart.delivery_on_arrival')}</span>
             </div>
           </div>
           
           <div className="text-xs text-gray-600 bg-amber-50 border border-amber-200 p-3 rounded-lg">
-            📦 Доставка распределится после прибытия карго. Вы получите уведомление и счёт на оплату доставки.
+            📦 {t('cart.delivery_note')}
           </div>
           
           <div className="space-y-3 pt-4 border-t-2 border-dashed border-gray-200">
@@ -184,13 +186,13 @@ export const CartPage = () => {
               onClick={() => createOrderMutation.mutate()}
               className="btn-primary w-full text-lg"
             >
-              ✓ Оформить заказ
+              ✓ {t('cart.checkout')}
             </button>
             <button
               onClick={() => navigate('/')}
               className="btn-secondary w-full"
             >
-              ← Продолжить покупки
+              ← {t('cart.continue_shopping')}
             </button>
           </div>
         </div>

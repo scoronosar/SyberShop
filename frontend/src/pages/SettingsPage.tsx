@@ -1,8 +1,10 @@
 import { useSettingsStore, type SupportedCurrency } from '../state/settings';
 import { useQuery } from '@tanstack/react-query';
 import { getActiveCurrencies } from '../api/currency-rates';
+import { useTranslation } from 'react-i18next';
 
 export const SettingsPage = () => {
+  const { t } = useTranslation();
   const language = useSettingsStore((s) => s.language);
   const currency = useSettingsStore((s) => s.currency);
   const setLanguage = useSettingsStore((s) => s.setLanguage);
@@ -21,8 +23,8 @@ export const SettingsPage = () => {
             <span className="text-white text-2xl">⚡</span>
           </div>
           <div>
-            <h1 className="text-3xl font-extrabold text-gray-900">Настройки</h1>
-            <p className="text-sm text-gray-600">Персонализируйте ваш опыт</p>
+            <h1 className="text-3xl font-extrabold text-gray-900">{t('settings.title')}</h1>
+            <p className="text-sm text-gray-600">{t('settings.subtitle')}</p>
           </div>
         </div>
 
@@ -30,7 +32,7 @@ export const SettingsPage = () => {
           <div className="p-6 bg-gradient-to-br from-blue-50 to-cyan-50 rounded-2xl border border-blue-200">
             <label className="flex items-center gap-2 text-sm font-bold text-gray-800 mb-3">
               <span>🌐</span>
-              <span>Язык интерфейса</span>
+              <span>{t('settings.language')}</span>
             </label>
             <select
               value={language}
@@ -50,7 +52,7 @@ export const SettingsPage = () => {
           <div className="p-6 bg-gradient-to-br from-amber-50 to-orange-50 rounded-2xl border border-amber-200">
             <label className="flex items-center gap-2 text-sm font-bold text-gray-800 mb-3">
               <span>💰</span>
-              <span>Валюта отображения</span>
+              <span>{t('settings.currency')}</span>
             </label>
             <select
               value={currency}
@@ -75,7 +77,7 @@ export const SettingsPage = () => {
               )}
             </select>
             <div className="mt-3 text-xs text-gray-700 bg-white/60 p-3 rounded-lg">
-              ℹ️ Цены автоматически пересчитываются по курсу из админ-панели. Курсы настраиваются администратором.
+              ℹ️ {t('settings.currency_note')}
             </div>
           </div>
         </div>
@@ -83,7 +85,7 @@ export const SettingsPage = () => {
         <div className="pt-6 border-t border-gray-200">
           <div className="flex items-center gap-3 text-sm text-gray-600">
             <span className="w-8 h-8 rounded-lg bg-green-100 flex items-center justify-center">✓</span>
-            <span>Все изменения сохраняются автоматически</span>
+            <span>{t('settings.auto_save')}</span>
           </div>
         </div>
       </div>

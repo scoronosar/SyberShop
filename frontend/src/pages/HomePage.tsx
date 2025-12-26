@@ -7,16 +7,158 @@ import { useSettingsStore } from '../state/settings';
 import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 
+// Extended categories with subcategories
 const CATEGORIES = [
-  { id: 'all', name: 'Все товары', icon: '🏪', query: '' },
-  { id: 'electronics', name: 'Электроника', icon: '📱', query: '数码产品' },
-  { id: 'fashion_women', name: 'Женская мода', icon: '👗', query: '时尚女装' },
-  { id: 'fashion_men', name: 'Мужская мода', icon: '👔', query: '潮流男装' },
-  { id: 'sports', name: 'Спорт', icon: '⚽', query: '运动户外' },
-  { id: 'home', name: 'Дом', icon: '🏠', query: '家居用品' },
-  { id: 'beauty', name: 'Красота', icon: '💄', query: '美妆护肤' },
-  { id: 'accessories', name: 'Аксессуары', icon: '👜', query: '包包饰品' },
-  { id: 'gifts', name: 'Подарки', icon: '🎁', query: '创意礼品' },
+  { id: 'all', nameKey: 'categories.all', icon: '🏪', query: '', children: [] },
+  { 
+    id: 'electronics', 
+    nameKey: 'categories.electronics', 
+    icon: '📱', 
+    query: '数码产品',
+    children: [
+      { id: 'phones', nameKey: 'categories.phones', query: '手机' },
+      { id: 'computers', nameKey: 'categories.computers', query: '电脑' },
+      { id: 'cameras', nameKey: 'categories.cameras', query: '相机' },
+      { id: 'audio', nameKey: 'categories.audio', query: '音频设备' },
+    ]
+  },
+  { 
+    id: 'fashion_women', 
+    nameKey: 'categories.fashion_women', 
+    icon: '👗', 
+    query: '时尚女装',
+    children: [
+      { id: 'womens_clothing', nameKey: 'categories.womens_clothing', query: '女装' },
+      { id: 'shoes', nameKey: 'categories.shoes', query: '女鞋' },
+      { id: 'bags', nameKey: 'categories.bags', query: '女包' },
+      { id: 'jewelry', nameKey: 'categories.jewelry', query: '首饰' },
+    ]
+  },
+  { 
+    id: 'fashion_men', 
+    nameKey: 'categories.fashion_men', 
+    icon: '👔', 
+    query: '潮流男装',
+    children: [
+      { id: 'mens_clothing', nameKey: 'categories.mens_clothing', query: '男装' },
+      { id: 'shoes_men', nameKey: 'categories.shoes', query: '男鞋' },
+      { id: 'watches', nameKey: 'categories.watches', query: '手表' },
+      { id: 'accessories_men', nameKey: 'categories.accessories', query: '男配饰' },
+    ]
+  },
+  { 
+    id: 'sports', 
+    nameKey: 'categories.sports', 
+    icon: '⚽', 
+    query: '运动户外',
+    children: [
+      { id: 'fitness', nameKey: 'categories.fitness', query: '健身器材' },
+      { id: 'outdoor', nameKey: 'categories.outdoor', query: '户外用品' },
+      { id: 'gaming', nameKey: 'categories.gaming', query: '游戏设备' },
+    ]
+  },
+  { 
+    id: 'home', 
+    nameKey: 'categories.home', 
+    icon: '🏠', 
+    query: '家居用品',
+    children: [
+      { id: 'furniture', nameKey: 'categories.furniture', query: '家具' },
+      { id: 'decor', nameKey: 'categories.decor', query: '装饰' },
+      { id: 'kitchen', nameKey: 'categories.kitchen', query: '厨房用品' },
+      { id: 'bathroom', nameKey: 'categories.bathroom', query: '浴室用品' },
+    ]
+  },
+  { 
+    id: 'beauty', 
+    nameKey: 'categories.beauty', 
+    icon: '💄', 
+    query: '美妆护肤',
+    children: [
+      { id: 'makeup', nameKey: 'categories.makeup', query: '化妆品' },
+      { id: 'skincare', nameKey: 'categories.skincare', query: '护肤品' },
+      { id: 'hair', nameKey: 'categories.hair', query: '护发' },
+      { id: 'perfume', nameKey: 'categories.perfume', query: '香水' },
+    ]
+  },
+  { 
+    id: 'accessories', 
+    nameKey: 'categories.accessories', 
+    icon: '👜', 
+    query: '包包饰品',
+    children: [
+      { id: 'bags_accessories', nameKey: 'categories.bags', query: '包袋' },
+      { id: 'wallets', nameKey: 'categories.wallets', query: '钱包' },
+      { id: 'sunglasses', nameKey: 'categories.sunglasses', query: '太阳镜' },
+      { id: 'belts', nameKey: 'categories.belts', query: '腰带' },
+    ]
+  },
+  { 
+    id: 'gifts', 
+    nameKey: 'categories.gifts', 
+    icon: '🎁', 
+    query: '创意礼品',
+    children: [
+      { id: 'toys', nameKey: 'categories.toys', query: '玩具' },
+      { id: 'books', nameKey: 'categories.books', query: '书籍' },
+      { id: 'jewelry_gifts', nameKey: 'categories.jewelry', query: '珠宝' },
+    ]
+  },
+  { 
+    id: 'toys', 
+    nameKey: 'categories.toys', 
+    icon: '🧸', 
+    query: '玩具',
+    children: [
+      { id: 'action_figures', nameKey: 'categories.action_figures', query: '手办' },
+      { id: 'puzzles', nameKey: 'categories.puzzles', query: '拼图' },
+      { id: 'board_games', nameKey: 'categories.board_games', query: '桌游' },
+      { id: 'educational', nameKey: 'categories.educational', query: '教育玩具' },
+    ]
+  },
+  { 
+    id: 'books', 
+    nameKey: 'categories.books', 
+    icon: '📚', 
+    query: '书籍',
+    children: [
+      { id: 'novels', nameKey: 'categories.novels', query: '小说' },
+      { id: 'comics', nameKey: 'categories.comics', query: '漫画' },
+      { id: 'textbooks', nameKey: 'categories.textbooks', query: '教科书' },
+    ]
+  },
+  { 
+    id: 'automotive', 
+    nameKey: 'categories.automotive', 
+    icon: '🚗', 
+    query: '汽车用品',
+    children: [
+      { id: 'parts', nameKey: 'categories.parts', query: '汽车配件' },
+      { id: 'accessories_auto', nameKey: 'categories.accessories_auto', query: '汽车装饰' },
+      { id: 'care', nameKey: 'categories.care', query: '汽车护理' },
+    ]
+  },
+  { 
+    id: 'pets', 
+    nameKey: 'categories.pets', 
+    icon: '🐾', 
+    query: '宠物用品',
+    children: [
+      { id: 'food_pets', nameKey: 'categories.food_pets', query: '宠物食品' },
+      { id: 'toys_pets', nameKey: 'categories.toys_pets', query: '宠物玩具' },
+      { id: 'care_pets', nameKey: 'categories.care', query: '宠物护理' },
+    ]
+  },
+  { 
+    id: 'health', 
+    nameKey: 'categories.health', 
+    icon: '💊', 
+    query: '健康用品',
+    children: [
+      { id: 'supplements', nameKey: 'categories.supplements', query: '保健品' },
+      { id: 'medical', nameKey: 'categories.medical', query: '医疗器械' },
+    ]
+  },
 ];
 
 export const HomePage = () => {
@@ -31,6 +173,7 @@ export const HomePage = () => {
   const currency = useSettingsStore((s) => s.currency);
   const language = useSettingsStore((s) => s.language);
   const [selectedCategory, setSelectedCategory] = useState('all');
+  const [selectedSubcategory, setSelectedSubcategory] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
   const [showCategories, setShowCategories] = useState(false);
   const queryClient = useQueryClient();
@@ -121,11 +264,13 @@ export const HomePage = () => {
     [searchParams, navigate],
   );
 
-  const handleCategoryClick = (category: typeof CATEGORIES[0]) => {
+  const handleCategoryClick = (category: typeof CATEGORIES[0], subcategory?: typeof CATEGORIES[0]['children'][0]) => {
     setSelectedCategory(category.id);
+    setSelectedSubcategory(subcategory?.id || null);
     const next = new URLSearchParams(searchParams);
-    if (category.query) {
-      next.set('q', category.query);
+    const query = subcategory?.query || category.query;
+    if (query) {
+      next.set('q', query);
     } else {
       next.delete('q');
     }
@@ -266,7 +411,7 @@ export const HomePage = () => {
               onClick={() => setShowCategories(!showCategories)}
               className="sm:hidden px-3 py-2 rounded-xl bg-gradient-to-r from-primary-500 to-primary-600 text-white font-bold text-sm shadow-lg hover:shadow-xl transition-all"
             >
-              {showCategories ? '✕ Скрыть' : '☰ Категории'}
+              {showCategories ? `✕ ${t('common.hide') || 'Скрыть'}` : `☰ ${t('header.categories_toggle')}`}
             </button>
           </div>
         </div>
@@ -296,7 +441,7 @@ export const HomePage = () => {
               <div className={`text-xs font-bold leading-tight ${
                 selectedCategory === category.id ? 'text-white' : 'text-gray-800 group-hover:text-primary-600'
               }`}>
-                {category.name}
+                {t(category.nameKey)}
               </div>
 
               {/* Selected indicator */}

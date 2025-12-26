@@ -7,10 +7,12 @@ import i18n from '../i18n';
 import { useSettingsStore } from '../state/settings';
 import { Modal } from './Modal';
 import { ImageSearch } from './ImageSearch';
+import { useTranslation } from 'react-i18next';
 
 type Props = { children: ReactNode };
 
 export const Layout = ({ children }: Props) => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const initialQuery = searchParams.get('q') ?? '';
@@ -73,18 +75,18 @@ export const Layout = ({ children }: Props) => {
               <input
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                  placeholder="Найти товары на Taobao..."
+                  placeholder={t('header.search_placeholder')}
                   className="w-full border-2 border-gray-200 pl-9 sm:pl-11 pr-16 sm:pr-20 md:pr-24 py-2 sm:py-2.5 lg:py-3 focus:outline-none focus:ring-2 sm:focus:ring-4 focus:ring-primary-200 focus:border-primary-400 transition-all rounded-lg sm:rounded-xl md:rounded-l-2xl md:rounded-r-2xl font-medium text-xs sm:text-sm placeholder:text-gray-400"
               />
               <button
                 type="button"
                 onClick={() => setShowImageSearch(true)}
                   className="absolute inset-y-0 right-0 px-2 sm:px-3 md:px-4 flex items-center gap-1 sm:gap-1.5 md:gap-2 hover:bg-primary-50 transition-all rounded-r-lg sm:rounded-r-xl md:rounded-r-2xl group/img"
-                title="Поиск по изображению"
+                title={t('header.image_search')}
               >
                   <span className="text-base sm:text-lg md:text-xl group-hover/img:scale-110 transition-transform">📷</span>
                   <span className="text-[10px] sm:text-xs font-semibold text-gray-600 group-hover/img:text-primary-600 hidden sm:inline">
-                    Фото
+                    {t('header.photo')}
                   </span>
               </button>
             </div>
@@ -92,7 +94,7 @@ export const Layout = ({ children }: Props) => {
               type="submit"
                 className="hidden sm:inline-flex bg-gradient-to-r from-primary-500 via-primary-600 to-amber-500 text-white px-4 sm:px-6 md:px-8 py-2 sm:py-2.5 md:py-3 hover:from-primary-600 hover:to-amber-600 hover:shadow-xl hover:scale-105 transition-all duration-300 font-bold rounded-lg sm:rounded-xl md:rounded-r-2xl md:rounded-l-none shadow-lg whitespace-nowrap items-center justify-center text-xs sm:text-sm md:text-base"
             >
-              Найти
+              {t('common.search')}
             </button>
           </form>
           
@@ -103,7 +105,7 @@ export const Layout = ({ children }: Props) => {
                 className="px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl hover:bg-gradient-to-br hover:from-primary-50 hover:to-amber-50 hover:text-primary-600 transition-all flex items-center gap-1.5 sm:gap-2 border-2 border-transparent hover:border-primary-200 hover:shadow-md"
               >
                 <span className="text-base sm:text-lg">🛒</span>
-                <span className="hidden sm:inline">Корзина</span>
+                <span className="hidden sm:inline">{t('common.cart')}</span>
             </Link>
               
             {role === 'admin' && (
@@ -111,8 +113,8 @@ export const Layout = ({ children }: Props) => {
                   to="/admin" 
                   className="px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl hover:bg-gradient-to-br hover:from-purple-50 hover:to-pink-50 hover:text-purple-600 transition-all flex items-center gap-1.5 sm:gap-2 border-2 border-transparent hover:border-purple-200 hover:shadow-md"
                 >
-                  <span className="text-base sm:text-lg">⚙️</span>
-                  <span className="hidden sm:inline">Админ</span>
+                  <span className="text-base sm:text-lg">⚡</span>
+                  <span className="hidden sm:inline">{t('common.admin')}</span>
                 </Link>
               )}
               
@@ -120,8 +122,8 @@ export const Layout = ({ children }: Props) => {
                 to="/settings" 
                 className="px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl hover:bg-gradient-to-br hover:from-blue-50 hover:to-cyan-50 hover:text-blue-600 transition-all flex items-center gap-1.5 sm:gap-2 border-2 border-transparent hover:border-blue-200 hover:shadow-md"
               >
-                <span className="text-base sm:text-lg">⚡</span>
-                <span className="hidden md:inline">Настройки</span>
+                <span className="text-base sm:text-lg">⚙️</span>
+                <span className="hidden md:inline">{t('common.settings')}</span>
               </Link>
               
               <Link 
@@ -129,7 +131,7 @@ export const Layout = ({ children }: Props) => {
                 className="px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl hover:bg-gradient-to-br hover:from-green-50 hover:to-emerald-50 hover:text-green-600 transition-all flex items-center gap-1.5 sm:gap-2 border-2 border-transparent hover:border-green-200 hover:shadow-md"
               >
                 <span className="text-base sm:text-lg">👤</span>
-                <span className="hidden lg:inline">Аккаунт</span>
+                <span className="hidden lg:inline">{t('common.account')}</span>
             </Link>
               
             {email ? (
@@ -141,7 +143,7 @@ export const Layout = ({ children }: Props) => {
                     onClick={logout} 
                     className="px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl text-red-600 hover:bg-red-50 border-2 border-transparent hover:border-red-200 hover:shadow-md transition-all font-bold text-xs sm:text-sm"
                   >
-                  Выйти
+                  {t('common.logout')}
                 </button>
               </div>
             ) : (
@@ -149,7 +151,7 @@ export const Layout = ({ children }: Props) => {
                   to="/login" 
                   className="px-4 sm:px-5 py-2 sm:py-2.5 rounded-xl bg-gradient-to-r from-primary-500 to-primary-600 text-white hover:from-primary-600 hover:to-primary-700 hover:shadow-xl hover:scale-105 transition-all font-bold shadow-lg text-xs sm:text-sm whitespace-nowrap"
                 >
-                Войти
+                {t('common.login')}
               </Link>
             )}
           </nav>
@@ -177,7 +179,7 @@ export const Layout = ({ children }: Props) => {
                 </div>
               </div>
               <p className="text-sm text-gray-600 leading-relaxed">
-                Ваш надежный партнер для покупок с Taobao. Миллионы товаров с быстрой доставкой.
+                {t('footer.description')}
               </p>
             </div>
 
@@ -185,20 +187,20 @@ export const Layout = ({ children }: Props) => {
             <div className="space-y-3">
               <h4 className="font-bold text-gray-800 flex items-center gap-2">
                 <span className="text-lg">ℹ️</span>
-                <span>О платформе</span>
+                <span>{t('footer.about')}</span>
               </h4>
               <ul className="space-y-2 text-sm text-gray-600">
                 <li className="flex items-center gap-2">
                   <span className="text-primary-500">✓</span>
-                  <span>Конвертация CNY в локальную валюту</span>
+                  <span>{t('footer.feature_cny_conversion')}</span>
                 </li>
                 <li className="flex items-center gap-2">
                   <span className="text-primary-500">✓</span>
-                  <span>Сервисный сбор 3% включен в цену</span>
+                  <span>{t('footer.feature_service_fee')}</span>
                 </li>
                 <li className="flex items-center gap-2">
                   <span className="text-primary-500">✓</span>
-                  <span>Доставка при прибытии груза</span>
+                  <span>{t('footer.feature_delivery')}</span>
                 </li>
               </ul>
             </div>
@@ -207,19 +209,19 @@ export const Layout = ({ children }: Props) => {
             <div className="space-y-3">
               <h4 className="font-bold text-gray-800 flex items-center gap-2">
                 <span className="text-lg">📞</span>
-                <span>Поддержка</span>
+                <span>{t('footer.support')}</span>
               </h4>
               <div className="space-y-3">
                 <div className="p-4 rounded-xl bg-gradient-to-br from-blue-50 to-cyan-50 border-2 border-blue-200">
-                  <div className="text-xs text-gray-600 mb-1">Время работы</div>
-                  <div className="font-bold text-gray-900">24/7 Онлайн</div>
+                  <div className="text-xs text-gray-600 mb-1">{t('footer.working_hours')}</div>
+                  <div className="font-bold text-gray-900">{t('footer.online_24_7')}</div>
                 </div>
                 <div className="flex gap-2">
                   <button className="flex-1 px-4 py-2.5 rounded-xl bg-green-500 hover:bg-green-600 text-white font-bold text-sm transition-all hover:scale-105 shadow-md">
-                    💬 Telegram
+                    💬 {t('footer.telegram')}
                   </button>
                   <button className="flex-1 px-4 py-2.5 rounded-xl bg-blue-500 hover:bg-blue-600 text-white font-bold text-sm transition-all hover:scale-105 shadow-md">
-                    📧 Email
+                    📧 {t('footer.email')}
                   </button>
                 </div>
               </div>
@@ -229,14 +231,14 @@ export const Layout = ({ children }: Props) => {
           {/* Bottom Bar */}
           <div className="mt-8 pt-8 border-t-2 border-gray-200 flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="text-sm text-gray-600 font-medium">
-              © 2024 SyberShop. Powered by Taobao Global API
+              {t('footer.copyright')}
             </div>
             <div className="flex items-center gap-3">
               <span className="px-3 py-1.5 rounded-lg bg-gradient-to-r from-green-100 to-emerald-100 text-green-700 text-xs font-bold border border-green-200">
-                🔒 Безопасные платежи
+                🔒 {t('footer.secure_payments')}
               </span>
               <span className="px-3 py-1.5 rounded-lg bg-gradient-to-r from-blue-100 to-cyan-100 text-blue-700 text-xs font-bold border border-blue-200">
-                ⚡ Быстрая обработка
+                ⚡ {t('footer.fast_processing')}
               </span>
             </div>
           </div>
