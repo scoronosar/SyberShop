@@ -40,17 +40,6 @@ export class AdminController {
         const orders = await this.prisma.order.findMany({
           include: { items: true },
           orderBy: { createdAt: 'desc' },
-          select: {
-            id: true,
-            userId: true,
-            subtotal: true,
-            deliveryFee: true,
-            total: true,
-            status: true,
-            createdAt: true,
-            chinaOrderId: true,
-            items: true,
-          },
         });
         return orders.map(order => ({
           ...order,
