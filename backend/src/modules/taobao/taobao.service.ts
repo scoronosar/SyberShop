@@ -33,6 +33,118 @@ export class TaobaoService {
     return sign;
   }
 
+  /**
+   * Translate Russian/other language queries to Chinese/English for Taobao API
+   * Taobao API keyword parameter only accepts Chinese or English
+   */
+  private translateQuery(query: string, language?: string): string {
+    // If query is already in Chinese/English characters, return as is
+    if (/^[\u4e00-\u9fa5a-zA-Z0-9\s]+$/.test(query)) {
+      return query.trim();
+    }
+
+    // Translation dictionary for common Russian terms
+    const translations: Record<string, string> = {
+      // Electronics
+      'телефон': '手机',
+      'смартфон': '智能手机',
+      'ноутбук': '笔记本电脑',
+      'компьютер': '电脑',
+      'планшет': '平板电脑',
+      'наушники': '耳机',
+      'колонки': '音响',
+      'камера': '相机',
+      'часы': '手表',
+      'зарядка': '充电器',
+      'кабель': '数据线',
+      
+      // Fashion
+      'одежда': '服装',
+      'платье': '连衣裙',
+      'футболка': 'T恤',
+      'джинсы': '牛仔裤',
+      'кроссовки': '运动鞋',
+      'сумка': '包',
+      'рюкзак': '背包',
+      'очки': '眼镜',
+      'украшения': '首饰',
+      'кольцо': '戒指',
+      'серьги': '耳环',
+      
+      // Home & Living
+      'мебель': '家具',
+      'кровать': '床',
+      'стол': '桌子',
+      'стул': '椅子',
+      'лампа': '灯',
+      'ковер': '地毯',
+      'посуда': '餐具',
+      'кухня': '厨房用品',
+      
+      // Beauty & Health
+      'косметика': '化妆品',
+      'крем': '面霜',
+      'шампунь': '洗发水',
+      'мыло': '肥皂',
+      'зубная паста': '牙膏',
+      'витамины': '维生素',
+      
+      // Sports
+      'спорт': '运动',
+      'футбол': '足球',
+      'баскетбол': '篮球',
+      'велосипед': '自行车',
+      'тренажер': '健身器材',
+      
+      // Toys & Games
+      'игрушка': '玩具',
+      'кукла': '娃娃',
+      'машина': '汽车',
+      'конструктор': '积木',
+      
+      // General
+      'подарок': '礼物',
+      'дешево': '便宜',
+      'скидка': '折扣',
+      'новый': '新品',
+      'популярный': '热销',
+    };
+
+    const lowerQuery = query.toLowerCase().trim();
+    
+    // Check for exact match
+    if (translations[lowerQuery]) {
+      this.logger.log(`Translated "${query}" -> "${translations[lowerQuery]}"`);
+      return translations[lowerQuery];
+    }
+    
+    // Check for partial matches (words in query)
+    const words = lowerQuery.split(/\s+/);
+    const translatedWords: string[] = [];
+    let hasTranslation = false;
+    
+    for (const word of words) {
+      if (translations[word]) {
+        translatedWords.push(translations[word]);
+        hasTranslation = true;
+      } else {
+        // Keep original word if no translation found
+        translatedWords.push(word);
+      }
+    }
+    
+    if (hasTranslation) {
+      const translated = translatedWords.join(' ');
+      this.logger.log(`Translated "${query}" -> "${translated}"`);
+      return translated;
+    }
+    
+    // If no translation found and language is Russian, try English fallback
+    // For now, return query as-is and let API handle it (might return empty results)
+    this.logger.warn(`No translation found for query: "${query}", using as-is (may not work)`);
+    return query.trim();
+  }
+
   async searchProducts(query: string, page = 1, pageSize = 20, language?: string) {
     if (this.mode === 'MOCK') {
       return this.getMockProducts(query);
@@ -61,6 +173,9 @@ export class TaobaoService {
         // Fallback to single keyword search if mix fails
       }
 
+      // Translate query to Chinese/English if needed (Taobao API only accepts Chinese/English keywords)
+      const translatedQuery = this.translateQuery(query, language);
+
       // TaoWorld Traffic API - /traffic/item/search (requires access_token)
       // Docs: https://open.taobao.global/doc/api.htm#/api?path=/traffic/item/search
       const timestamp = Date.now().toString();
@@ -73,7 +188,7 @@ export class TaobaoService {
         page_no: page.toString(),
         page_size: pageSize.toString(),
         access_token: accessToken,
-        keyword: query,
+        keyword: translatedQuery,
         sort: 'SALE_QTY_DESC', // Sort by sales for better recommendations
       };
 
@@ -84,7 +199,7 @@ export class TaobaoService {
 
       params.sign = this.generateSign(apiPath, params);
 
-      this.logger.log(`Calling TaoWorld Traffic Search API: ${apiPath} keyword="${query}"`);
+      this.logger.log(`Calling TaoWorld Traffic Search API: ${apiPath} keyword="${translatedQuery}" (original: "${query}")`);
       const response = await firstValueFrom(
         this.http.get(`${this.apiUrl}${apiPath}`, { params, timeout: 10000 }),
       );
@@ -158,7 +273,7 @@ export class TaobaoService {
     // For pagination: rotate through keywords based on page
     const numKeywords = 3;
     const keywordOffset = (page - 1) * numKeywords;
-    const selectedKeywords = keywords.slice(keywordOffset % keywords.length, (keywordOffset + numKeywords) % keywords.length);
+        const selectedKeywords = keywords.slice(keywordOffset % keywords.length, (keywordOffset + numKeywords) % keywords.length);
     
     // If we went past the end, wrap around
     if (selectedKeywords.length < numKeywords) {
@@ -171,6 +286,9 @@ export class TaobaoService {
     
     const promises = selectedKeywords.map(async (keyword, idx) => {
       try {
+        // Translate keyword if needed (though these are already in Chinese)
+        const translatedKeyword = this.translateQuery(keyword, language);
+        
         const params: Record<string, any> = {
           app_key: this.appKey,
           timestamp: (Number(timestamp) + idx * 100).toString(), // Unique timestamp per request
@@ -178,7 +296,7 @@ export class TaobaoService {
           page_no: '1',
           page_size: itemsPerKeyword.toString(),
           access_token: accessToken,
-          keyword,
+          keyword: translatedKeyword,
           sort: 'SALE_QTY_DESC',
         };
 
