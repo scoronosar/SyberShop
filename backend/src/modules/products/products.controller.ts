@@ -1,14 +1,18 @@
-import { Controller, Get, Param, Query } from '@nestjs/common';
+import { Controller, Get, Param, Query, Req } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { ProductsService } from './products.service';
+import { UserActivityService } from '../user-activity/user-activity.service';
 
 @ApiTags('products')
 @Controller('products')
 export class ProductsController {
-  constructor(private readonly products: ProductsService) {}
+  constructor(
+    private readonly products: ProductsService,
+    private readonly userActivity: UserActivityService,
+  ) {}
 
   @Get()
-  list(
+  async list(
     @Query('query') query?: string,
     @Query('sort') sort?: string,
     @Query('price_min') priceMin?: string,
@@ -17,7 +21,19 @@ export class ProductsController {
     @Query('currency') currency?: string,
     @Query('page') page?: string,
     @Query('language') language?: string,
+    @Req() req?: any,
   ) {
+    // Record search activity if user is authenticated
+    const userId = req?.user?.sub;
+    if (userId && query) {
+      this.userActivity.recordActivity({
+        userId,
+        activityType: 'search',
+        searchQuery: query,
+        metadata: { sort, priceMin, priceMax, availability },
+      }).catch(() => {}); // Don't wait for activity recording
+    }
+
     return this.products.search({
       query,
       sort,
@@ -31,7 +47,23 @@ export class ProductsController {
   }
 
   @Get(':id')
-  async detail(@Param('id') id: string, @Query('currency') currency?: string, @Query('language') language?: string) {
+  async detail(
+    @Param('id') id: string,
+    @Query('currency') currency?: string,
+    @Query('language') language?: string,
+    @Req() req?: any,
+  ) {
+    // Record view activity if user is authenticated
+    const userId = req?.user?.sub;
+    if (userId) {
+      this.userActivity.recordActivity({
+        userId,
+        activityType: 'view',
+        productId: id,
+        metadata: { currency, language },
+      }).catch(() => {}); // Don't wait for activity recording
+    }
+
     const product = await this.products.findOne(id, currency, language);
     if (!product) {
       return { 

@@ -18,6 +18,7 @@ model User {
   carts     Cart[]
   orders    Order[]
   favorites Favorite[]
+  activities UserActivity[]
 }
 
 model Product {
@@ -184,5 +185,20 @@ model ProductCategory {
   sortOrder   Int      @default(0)
   isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())
+}
+
+model UserActivity {
+  id          String   @id @default(uuid())
+  user        User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId      String?
+  activityType String  // 'view', 'search', 'add_to_cart', 'purchase', 'click'
+  productId   String?  // External Taobao product ID
+  searchQuery String? // Search query if activityType is 'search'
+  metadata    Json?    // Additional data (category, price range, etc.)
+  createdAt   DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@index([userId, activityType])
+  @@index([productId])
 }
 

@@ -1,12 +1,14 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CartService } from '../cart/cart.service';
+import { UserActivityService } from '../user-activity/user-activity.service';
 
 @Injectable()
 export class OrdersService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly cart: CartService,
+    private readonly userActivity: UserActivityService,
   ) {}
 
   async createFromCart(userId: string) {
@@ -37,6 +39,14 @@ export class OrdersService {
           finalPrice: item.price,
         },
       });
+
+      // Record purchase activity
+      this.userActivity.recordActivity({
+        userId,
+        activityType: 'purchase',
+        productId: item.productId,
+        metadata: { orderId: order.id, qty: item.qty, sku: item.sku },
+      }).catch(() => {}); // Don't wait for activity recording
     }
 
     await this.cart.clearCart(userId);

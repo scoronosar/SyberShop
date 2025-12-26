@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CurrencyService } from '../currency/currency.service';
 import { ProductsService } from '../products/products.service';
+import { UserActivityService } from '../user-activity/user-activity.service';
 import { AddCartItemDto } from './dto/add-cart-item.dto';
 
 type CartLine = {
@@ -27,6 +28,7 @@ export class CartService {
     private readonly prisma: PrismaService,
     private readonly currency: CurrencyService,
     private readonly products: ProductsService,
+    private readonly userActivity: UserActivityService,
   ) {}
 
   private safeParseSku(sku?: string | null): any | null {
@@ -131,6 +133,14 @@ export class CartService {
         snapshotId: snapshot.id,
       },
     });
+
+    // Record add to cart activity
+    this.userActivity.recordActivity({
+      userId,
+      activityType: 'add_to_cart',
+      productId: dto.productId,
+      metadata: { sku: dto.sku, qty: dto.qty },
+    }).catch(() => {}); // Don't wait for activity recording
 
     return this.getCart(userId);
   }

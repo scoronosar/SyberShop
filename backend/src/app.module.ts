@@ -14,6 +14,8 @@ import { AdminModule } from './modules/admin/admin.module';
 import { OAuthModule } from './modules/oauth/oauth.module';
 import { ImageSearchModule } from './modules/image-search/image-search.module';
 import { FavoritesModule } from './modules/favorites/favorites.module';
+import { UserActivityModule } from './modules/user-activity/user-activity.module';
+import { RecommendationsModule } from './modules/recommendations/recommendations.module';
 import { HttpModule } from '@nestjs/axios';
 
 @Module({
@@ -32,6 +34,8 @@ import { HttpModule } from '@nestjs/axios';
     OAuthModule,
     ImageSearchModule,
     FavoritesModule,
+    UserActivityModule,
+    RecommendationsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
