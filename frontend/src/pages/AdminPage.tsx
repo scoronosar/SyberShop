@@ -12,6 +12,9 @@ import { useTranslation } from 'react-i18next';
 
 export const AdminPage = () => {
   const { t } = useTranslation();
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [purchasedFilter, setPurchasedFilter] = useState<string>('all');
+  
   const { data, isLoading, isError: isOrdersError, error: ordersError } = useQuery({
     queryKey: ['admin-orders', statusFilter, purchasedFilter],
     queryFn: async () => {
@@ -141,8 +144,6 @@ export const AdminPage = () => {
   const [arriveCost, setArriveCost] = useState<string>('');
   const [adminEmail, setAdminEmail] = useState('');
   const [adminPassword, setAdminPassword] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [purchasedFilter, setPurchasedFilter] = useState<string>('all');
 
   const createCargoMutation = useMutation({
     mutationFn: () =>
