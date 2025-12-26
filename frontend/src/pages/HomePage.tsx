@@ -173,7 +173,6 @@ export const HomePage = () => {
   const currency = useSettingsStore((s) => s.currency);
   const language = useSettingsStore((s) => s.language);
   const [selectedCategory, setSelectedCategory] = useState('all');
-  const [selectedSubcategory, setSelectedSubcategory] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
   const [showCategories, setShowCategories] = useState(false);
   const queryClient = useQueryClient();
@@ -266,7 +265,6 @@ export const HomePage = () => {
 
   const handleCategoryClick = (category: typeof CATEGORIES[0], subcategory?: typeof CATEGORIES[0]['children'][0]) => {
     setSelectedCategory(category.id);
-    setSelectedSubcategory(subcategory?.id || null);
     const next = new URLSearchParams(searchParams);
     const query = subcategory?.query || category.query;
     if (query) {
